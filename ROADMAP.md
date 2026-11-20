@@ -2,9 +2,6 @@
 
 ## Now
 
-- **The window.** The viewer shows the screen of the machine at its size, draws the pointer apart, sends the keys and
-  the pointer when the user turns the input on, and says why each connection ended.
-  [Design](src/md/features/window.md)
 - **A test machine of modus in one command.** `viewertool machine` connects the viewer to a machine that the tool of
   modus runs on this computer. It needs a relay of the UDP port of the remote display in that tool.
   [Design](src/md/features/test_machine.md)

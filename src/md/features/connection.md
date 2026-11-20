@@ -16,24 +16,27 @@ gives it the input, and reads what it publishes. The window never waits for it.
 
 ## The wait
 
-The thread waits on its socket with a receive timeout: the time to the next deadline of QUIC, at least 1 ms and at most
-one second. Two things end the wait early:
+The thread waits on its socket with a receive timeout: the time to the next deadline of QUIC, with a bound.
 
-- a datagram of the machine;
-- a wake of the window: one byte from a second socket of the connection to the loopback port of the first one. The
-  window sends it after it queues a key or a pointer, or asks for the end. The thread drops a datagram from any other
-  sender.
+- A datagram of the machine ends the wait at once. The thread drops a datagram from any other sender.
+- The window puts keys, pointer records and the request of the end in a queue under the lock, and makes no system call.
+  The thread reads the queue after each wait.
+- So the bound of a wait is the delay of a key: `INPUT_WAIT_BOUND` (4 ms) while the input is on, `IDLE_WAIT_BOUND`
+  (100 ms) else, which is the delay of a Disconnect.
 
-So a key goes at once, and the thread wakes for no timer of its own. A plain receive timeout of a few milliseconds was
-refused: it delays each key by up to that time, and wakes the thread hundreds of times a second at rest.
+A wake datagram from the window to the loopback port of the thread was refused: it is a system call on the interface
+thread, which never makes one. The cost of the bound is up to 250 wakes of the thread a second while the input is on,
+and 10 at rest.
 
 ## The shared picture
 
 The connection and the window share one record under a lock: the RGBA pixels of the screen (at most 1920 x 1080), the
 screen size, the damage since the window last took it, the place of the pointer, the count of frames, and the end.
 
-- The thread holds the lock only to copy the damage of one frame, and to write the end.
+- The thread holds the lock to convert the damage of one frame to RGBA, and to write the end. A whole screen is about
+  2 million pixels: the window can wait that long for the lock, once, at the first frame.
 - The window holds it only to upload the damage to its texture, and to read the end.
+- The thread wakes the window with a post of the toolkit (`ui.post`), never by a call into the window.
 - The damage of the shared record has a capacity. Past it, the rectangles join into their bounding rectangle.
 
 ## The end
