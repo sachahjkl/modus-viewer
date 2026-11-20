@@ -27,3 +27,8 @@
 - **A record of the screen.** The viewer keeps the stream that it receives as a film, with the encoders of the toolkit.
 - **macOS.** The packages of modus that the viewer takes build on an ARM64 processor when their entropy code has a file
   for each processor.
+- **Windows releases.** The release workflow builds and publishes a Windows archive and its signed update, once a run
+  proves the modus packages on Windows. [Design](src/md/features/program.md)
+- **The bar dragged out of the window.** A drag of the bar out of the window makes it solo where it is dropped, once the
+  toolkit carries a drag between windows; until then the drop outside the screen and the detach button do it.
+  [Design](src/md/features/interface.md)

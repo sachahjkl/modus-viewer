@@ -1,0 +1,287 @@
+# The texts in fr (docs/i18n.md of gui_toolkit). Written by the i18n command: a translation left empty is the English.
+language fr
+
+en 1:1
+fr 1:1
+
+en Fit
+fr Ajuster
+
+en Window
+fr Fenêtre
+
+en Full screen
+fr Plein écran
+
+en Input
+fr Saisie
+
+en Let the bar hide
+fr Laisser la barre se cacher
+
+en Keep the bar shown
+fr Garder la barre affichée
+
+en Put the bar back in the window
+fr Remettre la barre dans la fenêtre
+
+en Move the bar to a window of its own
+fr Mettre la barre dans sa propre fenêtre
+
+en Settings
+fr Réglages
+
+en Disconnect
+fr Déconnecter
+
+en measuring
+fr mesure en cours
+
+en lost
+fr perdue
+
+en the service ended the session with no fault
+fr le service a fermé la session sans faute
+
+en this viewer sent a record past its bound
+fr cette visionneuse a envoyé un enregistrement qui dépasse sa limite
+
+en this viewer sent a record that the machine refused
+fr cette visionneuse a envoyé un enregistrement que la machine a refusé
+
+en this viewer sent a key or a pointer, and the principal allowed its key for the view only; turn the input off, or allow the key with "view_and_input"
+fr cette visionneuse a envoyé une touche ou un pointeur, et le principal a autorisé sa clé pour la vue seule ; coupez la saisie, ou autorisez la clé avec "view_and_input"
+
+en the grant of this viewer key ended: a principal revoked it, its session was locked, or another session came in front
+fr l'autorisation de cette clé de visionneuse a pris fin : un principal l'a révoquée, sa session a été verrouillée, ou une autre session est passée devant
+
+en this viewer took a viewer frame that was not in flight
+fr cette visionneuse a pris une image qui n'était pas en cours d'envoi
+
+en this viewer did not take a viewer frame in its bound
+fr cette visionneuse n'a pas pris une image dans le délai prévu
+
+en the session holds
+fr la session tient
+
+en the record broke a rule of the contract
+fr l'enregistrement enfreint une règle du contrat
+
+en the code of a screen piece is damaged
+fr le code d'un morceau d'écran est abîmé
+
+en a viewer frame came before the size of the screen
+fr une image est arrivée avant la taille de l'écran
+
+en a size of the screen came in a viewer frame
+fr une taille d'écran est arrivée au milieu d'une image
+
+en a viewer frame started in another one
+fr une image a commencé au milieu d'une autre
+
+en a viewer frame did not have the next serial
+fr une image n'avait pas le numéro suivant
+
+en a screen piece came outside a viewer frame
+fr un morceau d'écran est arrivé hors d'une image
+
+en a screen piece came past the count of its viewer frame
+fr un morceau d'écran a dépassé le nombre annoncé par son image
+
+en a screen piece came past the bytes of its viewer frame
+fr un morceau d'écran a dépassé les octets annoncés par son image
+
+en the end of a viewer frame came outside a viewer frame
+fr la fin d'une image est arrivée hors d'une image
+
+en the end of a viewer frame named another viewer frame
+fr la fin d'une image nommait une autre image
+
+en a viewer frame ended before its last screen piece
+fr une image a pris fin avant son dernier morceau d'écran
+
+en The connection runs.
+fr La connexion est en cours.
+
+en You ended the session (code 0, None).
+fr Vous avez fermé la session (code 0, None).
+
+en The machine ended the session with the code %d, which this viewer does not know.
+fr La machine a fermé la session avec le code %d, que cette visionneuse ne connaît pas.
+
+en The machine ended the session with the code %d (%s): %s.
+fr La machine a fermé la session avec le code %d (%s) : %s.
+
+en a screen piece: %s
+fr un morceau d'écran : %s
+
+en This viewer refused a record of the machine and ended the session with the code %d (Bad_Record): %s.
+fr Cette visionneuse a refusé un enregistrement de la machine et a fermé la session avec le code %d (Bad_Record) : %s.
+
+en The machine refused this viewer key in the handshake (TLS alert %d, access_denied): no principal allowed it, or the session of its principal is locked or not in front.
+fr La machine a refusé cette clé de visionneuse pendant la négociation (alerte TLS %d, access_denied) : aucun principal ne l'a autorisée, ou la session de son principal est verrouillée ou n'est pas devant.
+
+en The machine showed another key than the machine key that you gave (TLS alert %d, bad_certificate): this viewer ended the handshake.
+fr La machine a présenté une autre clé que la clé de machine donnée (alerte TLS %d, bad_certificate) : cette visionneuse a arrêté la négociation.
+
+en No machine answered the handshake before its deadline: check the address, the port and that remote_display runs. A machine that holds two viewers answers no third one.
+fr Aucune machine n'a répondu à la négociation dans le délai : vérifiez l'adresse, le port, et que remote_display tourne. Une machine qui a déjà deux visionneuses n'en accepte pas une troisième.
+
+en The machine stopped answering: the idle timeout of the connection passed.
+fr La machine ne répond plus : le délai d'inactivité de la connexion est passé.
+
+en The connection ended with the transport code 0x%x, sent by the machine.
+fr La connexion a pris fin avec le code de transport 0x%x, envoyé par la machine.
+
+en The connection ended with the transport code 0x%x, sent by this viewer.
+fr La connexion a pris fin avec le code de transport 0x%x, envoyé par cette visionneuse.
+
+en The address names no machine that this computer can find.
+fr L'adresse ne désigne aucune machine que cet ordinateur peut trouver.
+
+en The system gave this viewer no UDP socket.
+fr Le système n'a donné aucune socket UDP à cette visionneuse.
+
+en The generator of the operating system gave no random bytes: this viewer makes no connection without them.
+fr Le générateur du système n'a donné aucun octet aléatoire : cette visionneuse ne se connecte pas sans eux.
+
+en The QUIC client of this viewer did not start.
+fr Le client QUIC de cette visionneuse n'a pas démarré.
+
+en The connection ended.
+fr La connexion a pris fin.
+
+en Give the address of the machine: a name or an IPv4 address, then :port if it is not 7101.
+fr Donnez l'adresse de la machine : un nom ou une adresse IPv4, puis :port s'il n'est pas 7101.
+
+en The port is a number from 1 to 65535.
+fr Le port est un nombre de 1 à 65535.
+
+en The machine key is 64 hexadecimal digits: the key that remote_display writes on the log of the machine.
+fr La clé de machine compte 64 chiffres hexadécimaux : la clé que remote_display écrit dans le journal de la machine.
+
+en The viewer has no key yet: the sentence under its line says why.
+fr La visionneuse n'a pas encore de clé : la phrase sous sa ligne dit pourquoi.
+
+en The preferences cannot be written.
+fr Les préférences ne peuvent pas être écrites.
+
+en %s %s, on gui_toolkit %s. %s
+fr %s %s, sur gui_toolkit %s. %s
+
+en machine %s
+fr machine %s
+
+en Scale of the screen
+fr Échelle de l'écran
+
+en Fit: 1:1 when the screen of the machine fits the window, else as large as it fits. 1:1: always one pixel of the machine for one pixel of this screen; a larger screen moves with the pointer.
+fr Ajuster : 1:1 quand l'écran de la machine tient dans la fenêtre, sinon aussi grand qu'il tient. 1:1 : toujours un pixel de la machine pour un pixel de cet écran ; un écran plus grand suit le pointeur.
+
+en Shortcut of the input
+fr Raccourci de la saisie
+
+en The keys that give the keyboard and the pointer to the machine, and take them back.
+fr Les touches qui donnent le clavier et le pointeur à la machine, et les reprennent.
+
+en The bar of the machine stays shown over the screen. Off: it shows when the pointer rests at its edge.
+fr La barre de la machine reste affichée sur l'écran. Désactivé : elle s'affiche quand le pointeur s'arrête sur son bord.
+
+en General
+fr Général
+
+en Viewer
+fr Visionneuse
+
+en Appearance
+fr Apparence
+
+en Keys
+fr Touches
+
+en Delays and menus
+fr Délais et menus
+
+en Scrolling
+fr Défilement
+
+en Updates
+fr Mises à jour
+
+en Rendering
+fr Rendu
+
+en This desktop draws no title bar for the window of the viewer: the viewer keeps its own.
+fr Ce bureau ne dessine pas de barre de titre pour la fenêtre de la visionneuse : la visionneuse garde la sienne.
+
+en The viewer key is being read.
+fr La clé de la visionneuse est en cours de lecture.
+
+en This viewer made its key, and keeps it in the store of secrets of this account.
+fr Cette visionneuse a créé sa clé, et la garde dans le coffre de secrets de ce compte.
+
+en No store of secrets answers: this key lasts until the viewer closes.
+fr Aucun coffre de secrets ne répond : cette clé dure jusqu'à la fermeture de la visionneuse.
+
+en The store of secrets cannot open the kept key (a locked keyring, or another account): this key lasts until the viewer closes.
+fr Le coffre de secrets ne peut pas ouvrir la clé gardée (un trousseau verrouillé, ou un autre compte) : cette clé dure jusqu'à la fermeture de la visionneuse.
+
+en The file of the key could not be written: this key lasts until the viewer closes.
+fr Le fichier de la clé n'a pas pu être écrit : cette clé dure jusqu'à la fermeture de la visionneuse.
+
+en The generator of the operating system gave no random bytes: this viewer has no key, and connects to no machine.
+fr Le générateur du système n'a donné aucun octet aléatoire : cette visionneuse n'a pas de clé, et ne se connecte à aucune machine.
+
+en Connecting to %s
+fr Connexion à %s
+
+en Connecting
+fr Connexion
+
+en The session with %s ended
+fr La session avec %s a pris fin
+
+en Input released — %s to give it back
+fr Saisie rendue — %s pour la redonner
+
+en Input given to the machine — %s to take it back
+fr Saisie donnée à la machine — %s pour la reprendre
+
+en About
+fr À propos
+
+en Back
+fr Retour
+
+en Allow this viewer in a console of the machine:
+fr Autorisez cette visionneuse dans une console de la machine :
+
+en Recent machines
+fr Machines récentes
+
+en machine %s, at %s
+fr machine %s, à %s
+
+en Address of the machine
+fr Adresse de la machine
+
+en Machine key
+fr Clé de la machine
+
+en the public key that remote_display writes on the log of the machine
+fr la clé publique que remote_display écrit dans le journal de la machine
+
+en Send my keys and my pointer
+fr Envoyer mes touches et mon pointeur
+
+en Connect
+fr Se connecter
+
+en Change the address
+fr Changer l'adresse
+
+en Retry
+fr Réessayer
+
+en Cancel
+fr Annuler

@@ -432,18 +432,16 @@ a_whole_session_byte_by_byte :: proc(t: ^testing.T) {
 	testing.expect_value(t, string(session_outgoing(&s)), string(expected))
 }
 
-// Each end has a sentence that names its code; a code of the machine that the contract does not name stays a number.
+// The code of an end becomes its member at one place; a word past the last member, and the largest word, name none.
 @(test)
-each_end_names_its_code :: proc(t: ^testing.T) {
+a_code_of_the_machine_that_names_no_member_stays_a_word :: proc(t: ^testing.T) {
 	for member in protocol.Display_Error {
-		sentence := end_sentence({kind = .Machine_Code, code = u64(member)}, context.temp_allocator)
-		testing.expect(t, strings.contains(sentence, protocol.DISPLAY_ERROR_NAMES[member]), sentence)
+		read, known := machine_code_of(u64(member))
+		testing.expect(t, known)
+		testing.expect_value(t, read, member)
 	}
-	unknown := end_sentence({kind = .Machine_Code, code = u64(max(protocol.Display_Error)) + 1}, context.temp_allocator)
-	testing.expect(t, strings.contains(unknown, "does not know"), unknown)
-	refused := end_sentence({kind = .Viewer_Refused_Record, refusal = .Record, record_problem = .Past_Bound}, context.temp_allocator)
-	testing.expect(t, strings.contains(refused, protocol.RECORD_PROBLEM_SENTENCES[.Past_Bound]), refused)
-	for kind in End_Kind {
-		testing.expect(t, end_sentence({kind = kind}, context.temp_allocator) != "")
+	for word in ([]u64{u64(max(protocol.Display_Error)) + 1, max(u64)}) {
+		_, known := machine_code_of(word)
+		testing.expect(t, !known)
 	}
 }

@@ -42,8 +42,13 @@ own. This folder records the design on the side of the viewer.
   picture shared with the window, the end of a connection and its sentence
 - [features/viewer_key.md](features/viewer_key.md): the viewer key; where it is kept, and what the viewer does when the
   store of secrets is absent
-- [features/interface.md](features/interface.md): the states of the window, the screen that fills it (fit, 1:1, whole
-  scales), the windowed and full screen modes, the floating bar on hover, the input held or released by Ctrl+Alt
+- [features/interface.md](features/interface.md): the machined look, the states of the window, the screen that fills
+  it (fit, 1:1, whole scales), the title bar and full screen, the bar (docked, floating or solo, its handle, its pin,
+  when it shows), the input held or released by its shortcut
+- [features/settings.md](features/settings.md): the toolkit's settings page, the viewer's own preferences, the recent
+  machines, how the file is read and written
+- [features/program.md](features/program.md): the start of the program, the languages, the crash report, the
+  updates and the release, about, the place of the window
 - [features/immediacy.md](features/immediacy.md): what makes the remote immediate: the host cursor, the motions
   coalesced to one for each frame, the transport of the input, one frame in flight, the numbers of `-measure`, and
   the records that version 2 of the protocol adds
@@ -51,5 +56,7 @@ own. This folder records the design on the side of the viewer.
   modus, and what `modustool run --remote-display` gives for it
 - [features/screenshot.md](features/screenshot.md): the run with no window that writes the picture of the window once
   the first whole screen of the machine is drawn; its condition, its bound and its failures
+- [infrastructure/flake.md](infrastructure/flake.md): `nix run`, the submodule of gui_toolkit and the input of modus,
+  the package and its runtime libraries, the checks
 - [infrastructure/modus_source.md](infrastructure/modus_source.md): how the viewer takes the source of modus, which
   packages build on a host, and which do not

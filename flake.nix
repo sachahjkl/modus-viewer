@@ -59,6 +59,7 @@
     runtime = with pkgs; [
       vulkan-loader
       mesa
+      libglvnd # libEGL.so.1: wgpu's GL backend, where Vulkan has no driver
       libxkbcommon
       wayland
       libx11
@@ -128,6 +129,8 @@
       installPhase = ''
         runHook preInstall
         install -Dm755 build/modus-viewer $out/bin/modus-viewer
+        # (what the window opens with dlopen, whatever the RUNPATH says: `nix run` starts it on any system with Nix)
+        wrapProgram $out/bin/modus-viewer --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath runtime}
         install -Dm644 -t $out/share/doc/modus-viewer LICENSE README.md CHANGELOG.md
         runHook postInstall
       '';

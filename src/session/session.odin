@@ -32,22 +32,6 @@ Refusal :: enum u8 {
 	Frame_End_Before_Last_Piece, // A Viewer_Frame_End before the last screen piece of its count.
 }
 
-@(rodata)
-REFUSAL_SENTENCES := [Refusal]string {
-	.None                        = "the session holds",
-	.Record                      = "the record broke a rule of the contract",
-	.Screen_Piece_Code           = "the code of a screen piece is damaged",
-	.Frame_Before_Screen_Size    = "a viewer frame came before the size of the screen",
-	.Screen_Size_In_Frame        = "a size of the screen came in a viewer frame",
-	.Frame_Start_In_Frame        = "a viewer frame started in another one",
-	.Serial_Out_Of_Order         = "a viewer frame did not have the next serial",
-	.Piece_Outside_Frame         = "a screen piece came outside a viewer frame",
-	.Piece_Past_Count            = "a screen piece came past the count of its viewer frame",
-	.Piece_Past_Bytes            = "a screen piece came past the bytes of its viewer frame",
-	.Frame_End_Outside_Frame     = "the end of a viewer frame came outside a viewer frame",
-	.Frame_End_Other_Serial      = "the end of a viewer frame named another viewer frame",
-	.Frame_End_Before_Last_Piece = "a viewer frame ended before its last screen piece",
-}
 
 // What one call of session_received gives.
 Outcome :: enum u8 {

@@ -10,10 +10,6 @@ import protocol "modus:contract/remote_display"
 import "connection"
 import "layout"
 
-// What a toast says after Ctrl+Alt.
-INPUT_RELEASED_TOAST :: "Input released — Ctrl+Alt to give it back"
-INPUT_HELD_TOAST :: "Input given to the machine — Ctrl+Alt to take it back"
-
 // input_hook sends the events that the machine holds, and gives the rest to the interface.
 input_hook :: proc(h: ^host.Host, events: []platform.Event) -> []platform.Event {
 	app := (^App)(h.user)
@@ -22,10 +18,15 @@ input_hook :: proc(h: ^host.Host, events: []platform.Event) -> []platform.Event 
 	}
 	c := app.viewer_connection
 	if c == nil || !app.connected || app.end_asked || view_state(app) != .Screen {
+		for event in events {
+			modifier_note(app, event)
+		}
 		return events
 	}
 	kept := make([dynamic]platform.Event, 0, len(events), context.temp_allocator)
 	for event in events {
+		// The modifiers in the order of the batch: the shortcut reads the ones down at its own press.
+		modifier_note(app, event)
 		if shortcut_take(app, c, event) {
 			continue
 		}
@@ -50,36 +51,43 @@ pointer_note :: proc(app: ^App, event: platform.Event) {
 	case .Mouse_Leave:
 		app.host_pointer_valid = false
 		app.host_buttons_down = false
-	case .Key_Press:
-		if event.key == .Ctrl {
-			app.ctrl_down = true
-		} else if event.key == .Alt {
-			app.alt_down = true
-		}
-	case .Key_Release:
-		if event.key == .Ctrl {
-			app.ctrl_down = false
-		} else if event.key == .Alt {
-			app.alt_down = false
-		}
 	}
 }
 
-// shortcut_take switches the input on Ctrl+Alt, and says if it took the event. Its press never reaches the machine;
-// the releases of Ctrl and Alt go, so no modifier stays down there.
+// The modifier keys that a shortcut of the input can name.
+@(private = "file")
+SHORTCUT_KEYS :: platform.Keys{.Ctrl, .Alt, .Shift}
+
+// modifier_note keeps which modifier keys are down.
+@(private = "file")
+modifier_note :: proc(app: ^App, event: platform.Event) {
+	if event.key not_in SHORTCUT_KEYS {
+		return
+	}
+	#partial switch event.kind {
+	case .Key_Press:
+		app.keys_down += {event.key}
+	case .Key_Release:
+		app.keys_down -= {event.key}
+	}
+}
+
+// shortcut_take switches the input on the shortcut of the settings (viewer.input_shortcut, Ctrl+Alt by default): the
+// press that completes its keys. It says if it took the event. That press never reaches the machine; the releases of
+// the shortcut's keys go, so no modifier stays down there.
 shortcut_take :: proc(app: ^App, c: ^connection.Connection, event: platform.Event) -> bool {
-	if event.kind != .Key_Press || event.repeat {
+	if event.kind != .Key_Press || event.repeat || event.key not_in app.settings.shortcut {
 		return false
 	}
-	ctrl_alt := (event.key == .Ctrl && app.alt_down) || (event.key == .Alt && app.ctrl_down)
-	if !ctrl_alt {
+	if app.keys_down & SHORTCUT_KEYS != app.settings.shortcut {
 		return false
 	}
 	if app.input_held {
 		motion_flush(app, c)
 		pending_flush(app, c)
-		connection.connection_input(c, protocol.Key_Body{code = scan_code_of_key(.Ctrl)})
-		connection.connection_input(c, protocol.Key_Body{code = scan_code_of_key(.Alt)})
+		for key in app.settings.shortcut {
+			connection.connection_input(c, protocol.Key_Body{code = scan_code_of_key(key)})
+		}
 	}
 	input_hold(app, !app.input_held)
 	app.toast_due = app.input_held ? Toast_Due.Held : Toast_Due.Released
@@ -181,13 +189,9 @@ machine_takes_pointer :: proc(app: ^App, at: [2]f32, inside: bool) -> bool {
 	return inside && !bar_holds_pointer(app, at)
 }
 
-// bar_holds_pointer: the bar is drawn and the place is on it.
+// bar_holds_pointer: the bar is drawn in the window and the place is on it, or the bar is moving.
 bar_holds_pointer :: proc(app: ^App, at: [2]f32) -> bool {
-	if !bar_shown(app) {
-		return false
-	}
-	r := app.bar_rect
-	return at.x >= r.min.x && at.x < r.max.x && at.y >= r.min.y && at.y < r.max.y
+	return app.bar.dragging || inside_rect(app.bar.rect, at)
 }
 
 // motion_flush sends the motion of the batch that waits.
@@ -213,5 +217,5 @@ pending_flush :: proc(app: ^App, c: ^connection.Connection) {
 
 // screen_place maps a place of the window to a pixel of the screen of the machine, clamped to the screen.
 screen_place :: proc(app: ^App, at: [2]f32) -> (x, y: u32, inside: bool) {
-	return layout.screen_pixel(app.placement, app.area, at, app.screen.width, app.screen.height)
+	return layout.screen_pixel(app.placement_of_screen, app.area, at, app.screen.width, app.screen.height)
 }

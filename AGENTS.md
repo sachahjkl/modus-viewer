@@ -19,13 +19,19 @@ Every step is a command of `tools/viewertool`:
   `MODUS_SOURCE` to its root.
 - `build [release|debug]` builds `build/modus-viewer`. `build.sh` and `build.bat` are its shortcuts. With no word, the
   build has no optimisation: use it while you iterate.
-- `test` runs the host tests of `src/session`: the border of each record of the machine, with no window and no socket.
-- `check` runs the changelog and roadmap check, `odin check -vet`, the tests and a release build.
+- `test` runs the host tests of `src/session` (the border of each record of the machine) and of `src/layout` (the
+  placement of the screen, the place and the hover of the bar), with no window and no socket.
+- `check` runs the changelog and roadmap check, the French catalogue, `odin check -vet` for Linux and Windows, the
+  tests and a release build.
+- `i18n fr` writes `i18n/fr.txt` from the texts of the code; translate each new text there.
+- `package`, `notes`, `ship <patch|minor|major>`: the release (`src/md/features/program.md`, "The updates");
+  `update keygen | pubkey | manifest | verify`: the update key and its manifests.
 - `machine <port> <machine key> [--screenshot <file.png> [--bar]] [--measure]` builds the viewer and connects it to a
   test machine of modus on this computer, which `modustool run --remote-display` runs. With `--screenshot`, the viewer
   has no window and writes the picture of its window, with the bar for `--bar` (`src/md/features/screenshot.md`).
-- `test` also runs the host tests of `src/layout`: the placement of the screen and the hover of the bar.
 - `changelog new <type> <text>` writes a fragment.
+- `nix run .` starts the packaged viewer; `nix flake check` builds it and runs the host tests
+  (`src/md/infrastructure/flake.md`).
 
 ## Rules
 

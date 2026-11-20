@@ -45,8 +45,10 @@ screen size, the damage since the window last took it, the place of the pointer,
 
 ## The end
 
-The end is one value, `session.End`, with one kind and its code. `session.end_sentence` gives its sentence, with the
-code, for the window. The kinds:
+The end is one value, `session.End`, with one kind and its code. The window says it in the language of the user
+(`end_sentence`, `src/end_words.odin`): the session is pure and holds no words of a language. The application code
+becomes its member of the contract at one place, `session.machine_code_of`; a word that names none stays a number in
+the sentence. The kinds:
 
 | Kind | When |
 |---|---|

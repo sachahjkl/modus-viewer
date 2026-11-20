@@ -7,6 +7,7 @@ import "core:encoding/hex"
 import "core:fmt"
 import "core:os"
 import "core:thread"
+import i18n "gt:i18n"
 import secrets "gt:secrets"
 import "gt:platform"
 import "gt:ui"
@@ -29,15 +30,15 @@ Viewer_Key_Origin :: enum u8 {
 	No_System_Random,     // The generator of the operating system gave no bytes: no key, and no connection.
 }
 
-@(rodata)
+// The sentence of each origin, in English: tr where it is shown (the command line prints the English).
 VIEWER_KEY_ORIGIN_SENTENCES := [Viewer_Key_Origin]string {
-	.Loading              = "The viewer key is being read.",
+	.Loading              = i18n.later("The viewer key is being read."),
 	.Kept                 = "",
-	.Made                 = "This viewer made its key, and keeps it in the store of secrets of this account.",
-	.Run_Only_No_Store    = "No store of secrets answers: this key lasts until the viewer closes.",
-	.Run_Only_Not_Opened  = "The store of secrets cannot open the kept key (a locked keyring, or another account): this key lasts until the viewer closes.",
-	.Run_Only_Not_Written = "The file of the key could not be written: this key lasts until the viewer closes.",
-	.No_System_Random     = "The generator of the operating system gave no random bytes: this viewer has no key, and connects to no machine.",
+	.Made                 = i18n.later("This viewer made its key, and keeps it in the store of secrets of this account."),
+	.Run_Only_No_Store    = i18n.later("No store of secrets answers: this key lasts until the viewer closes."),
+	.Run_Only_Not_Opened  = i18n.later("The store of secrets cannot open the kept key (a locked keyring, or another account): this key lasts until the viewer closes."),
+	.Run_Only_Not_Written = i18n.later("The file of the key could not be written: this key lasts until the viewer closes."),
+	.No_System_Random     = i18n.later("The generator of the operating system gave no random bytes: this viewer has no key, and connects to no machine."),
 }
 
 Viewer_Key :: struct {

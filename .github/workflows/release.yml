@@ -1,0 +1,50 @@
+name: Release
+
+# A version tag vX.Y.Z (viewertool ship makes it) builds the viewer and publishes it: the Linux archive with its
+# SHA-256, the program alone and its update manifest signed by the secret UPDATE_SIGNING_KEY (what installed copies
+# update themselves from), on a GitHub release whose notes are the changelog's section of that version. Debian 12, as the
+# other programs of the owner: the oldest glibc that a Linux build then needs. The modus source is the commit that
+# flake.lock pins (src/md/infrastructure/modus_source.md).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    container: debian:bookworm
+    timeout-minutes: 40
+    steps:
+      - name: Debian's packages
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends git ca-certificates curl jq xz-utils zstd unzip clang lld binutils nasm libfontconfig-dev libfreetype-dev gh >/dev/null
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: The checkout trusted
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: ./ext/gui_toolkit/.github/actions/setup-odin-linux
+      - name: The modus source of flake.lock
+        run: |
+          rev="$(jq -r '.nodes.modus.locked.rev' flake.lock)"
+          git clone --quiet https://github.com/sachahjkl/modus "$RUNNER_TEMP/modus"
+          git -C "$RUNNER_TEMP/modus" checkout --quiet "$rev"
+          echo "MODUS_SOURCE=$RUNNER_TEMP/modus" >> "$GITHUB_ENV"
+      - name: Build and test
+        run: |
+          mkdir -p build
+          odin build tools/viewertool -collection:gt=ext/gui_toolkit/src -out:build/viewertool -vet
+          build/viewertool check
+      - name: Package
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: build/viewertool package ${{ github.ref_name }}
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build/viewertool notes ${{ github.ref_name }} > build/notes.md
+          gh release create "${{ github.ref_name }}" build/dist/* --title "modus viewer ${GITHUB_REF_NAME#v}" --notes-file build/notes.md --latest
