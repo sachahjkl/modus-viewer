@@ -5,6 +5,11 @@ picture of its window once the first whole screen of the machine is drawn, and e
 works, with no person and no window on the desktop. `viewertool machine <port> <key> --screenshot <file.png>` passes
 both options.
 
+With `-screenshot-bar` (`--bar` for `viewertool machine`), the floating bar is drawn as shown in the picture, so a
+screenshot shows both looks of the interface (`interface.md`). The headless window opens at 1920 × 1080, the
+reference screen of modus and the largest screen of the protocol, because its renderer keeps the size of its opening;
+the first whole frame gives it the size of the screen of the machine.
+
 ## No window
 
 `-headless` opens the window with `headless` of `gt:host`: a window of no system, drawn into a picture by the

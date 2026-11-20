@@ -1,26 +1,41 @@
 package viewertool
 
-// `machine <port> <machine key> [--screenshot <file.png>]`: the viewer on a test machine of modus that runs on this
-// computer (src/md/features/test_machine.md). The tool of modus relays a port of the loopback to the machine; the
-// viewer gets that port, the key that remote_display wrote on the log of the machine, and the input on. With
-// --screenshot, the viewer runs with no window, writes the picture of its window once the first whole screen of the
-// machine is drawn, and ends (src/md/features/screenshot.md).
+// `machine <port> <machine key> [--screenshot <file.png> [--bar]] [--measure]`: the viewer on a test machine of modus
+// that runs on this computer (src/md/features/test_machine.md). The tool of modus relays a port of the loopback to the
+// machine; the viewer gets that port, the key that remote_display wrote on the log of the machine, and the input on.
+// With --screenshot, the viewer runs with no window, writes the picture of its window once the first whole screen of
+// the machine is drawn, and ends (src/md/features/screenshot.md); --bar shows the floating bar in it. --measure prints
+// the measures at the end (src/md/features/immediacy.md).
 
 import "core:fmt"
 import "core:strconv"
 import cli "gt:cli"
 import toolbox "gt:toolbox"
 
-MACHINE_USAGE :: "viewertool machine <port> <machine key> [--screenshot <file.png>]"
+MACHINE_USAGE :: "viewertool machine <port> <machine key> [--screenshot <file.png> [--bar]] [--measure]"
 
 run_machine :: proc(args: []string) -> cli.Exit {
-	screenshot := ""
-	switch {
-	case len(args) == 2:
-	case len(args) == 4 && args[2] == "--screenshot" && args[3] != "":
-		screenshot = args[3]
-	case:
+	if len(args) < 2 {
 		fmt.eprintfln("usage: %s", MACHINE_USAGE)
+		return .Usage
+	}
+	screenshot, bar, measure := "", false, false
+	for index := 2; index < len(args); index += 1 {
+		switch {
+		case args[index] == "--screenshot" && index + 1 < len(args) && args[index + 1] != "":
+			index += 1
+			screenshot = args[index]
+		case args[index] == "--bar":
+			bar = true
+		case args[index] == "--measure":
+			measure = true
+		case:
+			fmt.eprintfln("usage: %s", MACHINE_USAGE)
+			return .Usage
+		}
+	}
+	if bar && screenshot == "" {
+		fmt.eprintfln("viewertool machine: --bar shows the bar in a screenshot: it goes with --screenshot")
 		return .Usage
 	}
 	port, key := args[0], args[1]
@@ -39,6 +54,12 @@ run_machine :: proc(args: []string) -> cli.Exit {
 	append(&command, PROGRAM, fmt.tprintf("-address:127.0.0.1:%s", port), fmt.tprintf("-machine-key:%s", key), "-input")
 	if screenshot != "" {
 		append(&command, "-headless", fmt.tprintf("-screenshot:%s", screenshot))
+	}
+	if bar {
+		append(&command, "-screenshot-bar")
+	}
+	if measure {
+		append(&command, "-measure")
 	}
 	if !toolbox.run(command[:], {echo = true}) {
 		return .Failed

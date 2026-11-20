@@ -13,8 +13,9 @@ own. This folder records the design on the side of the viewer.
     thread, no window. Its host tests drive it byte by byte.
   - **The connection** (`src/connection`): one thread for each connection. It owns a UDP socket, the QUIC connection
     of modus, and a session. It publishes each whole viewer frame into a picture that it shares with the window.
-  - **The window** (`src/`): the form, the screen, the pointer, the input, the sentence of the end. It never waits on
-    the disk or the network.
+  - **The window** (`src/`): the form, the screen, the floating bar, the input, the message of an end. It never waits
+    on the disk or the network. Its rules that need no window (the placement of the screen, the hover of the bar) are
+    the pure package `src/layout`, with host tests.
 - The viewer reuses the code of the system: the contract `remote_display`, the QUIC and TLS of `modus:support/quic`,
   and the cryptography module compiled for the host. The tool of modus already runs that code on a host in its peer.
 
@@ -24,8 +25,9 @@ own. This folder records the design on the side of the viewer.
   progress changes the screen of the session, never the picture that the window shows.
 - **The take is at once.** The session queues `Viewer_Frame_Taken` when the frame is whole, before the window draws
   it. The service then sends the next frame while the window uploads this one: the viewer adds no round trip.
-- **The pointer is apart.** The machine sends the place of its pointer, not its picture. The viewer draws a mark at
-  that place, over the screen.
+- **The cursor is the host's.** While the machine holds the input, the cursor over the screen is the cursor of the
+  host, which never waits for a frame; the screen pieces hold no pointer. Else the viewer draws the pointer of the
+  machine as an arrow at its last place (`features/immediacy.md`).
 - **The input is a choice of the user.** The viewer cannot know whether the principal allowed its key for the input.
   The user turns the input on. If the key holds the view alone, the machine ends the session with the code
   `Input_Not_Allowed`, and the sentence of the end says so.
@@ -40,8 +42,11 @@ own. This folder records the design on the side of the viewer.
   picture shared with the window, the end of a connection and its sentence
 - [features/viewer_key.md](features/viewer_key.md): the viewer key; where it is kept, and what the viewer does when the
   store of secrets is absent
-- [features/window.md](features/window.md): the form, the screen scaled to the window, the pointer mark, the keys and
-  the pointer that go to the machine
+- [features/interface.md](features/interface.md): the states of the window, the screen that fills it (fit, 1:1, whole
+  scales), the windowed and full screen modes, the floating bar on hover, the input held or released by Ctrl+Alt
+- [features/immediacy.md](features/immediacy.md): what makes the remote immediate: the host cursor, the motions
+  coalesced to one for each frame, the transport of the input, one frame in flight, the numbers of `-measure`, and
+  the records that version 2 of the protocol adds
 - [features/test_machine.md](features/test_machine.md): the command that connects the viewer to a test machine of
   modus, and what `modustool run --remote-display` gives for it
 - [features/screenshot.md](features/screenshot.md): the run with no window that writes the picture of the window once

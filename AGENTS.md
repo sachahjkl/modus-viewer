@@ -21,9 +21,10 @@ Every step is a command of `tools/viewertool`:
   build has no optimisation: use it while you iterate.
 - `test` runs the host tests of `src/session`: the border of each record of the machine, with no window and no socket.
 - `check` runs the changelog and roadmap check, `odin check -vet`, the tests and a release build.
-- `machine <port> <machine key> [--screenshot <file.png>]` builds the viewer and connects it to a test machine of modus
-  on this computer, which `modustool run --remote-display` runs. With `--screenshot`, the viewer has no window and
-  writes the picture of its window (`src/md/features/screenshot.md`).
+- `machine <port> <machine key> [--screenshot <file.png> [--bar]] [--measure]` builds the viewer and connects it to a
+  test machine of modus on this computer, which `modustool run --remote-display` runs. With `--screenshot`, the viewer
+  has no window and writes the picture of its window, with the bar for `--bar` (`src/md/features/screenshot.md`).
+- `test` also runs the host tests of `src/layout`: the placement of the screen and the hover of the bar.
 - `changelog new <type> <text>` writes a fragment.
 
 ## Rules

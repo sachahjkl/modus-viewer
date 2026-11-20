@@ -53,7 +53,19 @@ Picture :: struct {
 	ended:          bool, // The thread ended: `end` says how. The window then calls connection_destroy.
 	end:            session.End,
 	input_dropped:  u64,  // Records of the window that found the queue full.
+	// The quality of the connection (src/md/features/immediacy.md, "The numbers").
+	round_trip_microseconds: u64,  // The smoothed round trip of QUIC; 0 before its first sample.
+	lost:                    bool, // QUIC sent LOST_PROBE_TIMEOUTS probes in a row with no acknowledgement.
+	// The samples of the round trip of QUIC, for -measure: the newest ROUND_TRIP_SAMPLES, in a ring.
+	round_trip_samples:      [ROUND_TRIP_SAMPLES]u32,
+	round_trip_sample_count: int, // All the samples taken; the ring holds the last ones.
 }
+
+// The probes of QUIC in a row with no acknowledgement after which the connection shows as lost: one probe is a slow
+// packet, two are a path that answers nothing.
+LOST_PROBE_TIMEOUTS :: 2
+// The samples of the round trip that -measure reads: enough for a median of a long session, and 4 KiB.
+ROUND_TRIP_SAMPLES :: 1024
 
 Connection :: struct {
 	lock:            sync.Mutex,
@@ -61,6 +73,7 @@ Connection :: struct {
 	input:           [INPUT_CAPACITY]Input,
 	input_count:     int,
 	end_asked:       bool,
+	input_held:      bool, // The machine holds the keys and the pointer of the user (Ctrl+Alt, the switch of the bar).
 	// The thread calls it after each publication, from its own thread: it must only post to the window.
 	on_change:       proc(user: rawptr),
 	on_change_user:  rawptr,
@@ -74,6 +87,7 @@ connection_start :: proc(settings: Settings, on_change: proc(user: rawptr), user
 	c.settings = settings
 	c.settings.host = clone_string(settings.host)
 	c.on_change, c.on_change_user = on_change, user
+	c.input_held = settings.input
 	c.picture.rgba = make([]u8, protocol.SCREEN_WIDTH_LIMIT * protocol.SCREEN_HEIGHT_LIMIT * 4)
 	c.worker_thread = thread.create(connection_thread)
 	c.worker_thread.data = c
@@ -102,6 +116,15 @@ connection_end_and_wait :: proc(c: ^Connection) {
 connection_end :: proc(c: ^Connection) {
 	sync.mutex_lock(&c.lock)
 	c.end_asked = true
+	sync.mutex_unlock(&c.lock)
+}
+
+// connection_hold_input says if the machine holds the keys and the pointer. Released, the window queues nothing more;
+// the records that it queued before the release (the releases of Ctrl and Alt) still go, in order. The first hold of a
+// session that started with the input off lets its session send input from then on.
+connection_hold_input :: proc(c: ^Connection, held: bool) {
+	sync.mutex_lock(&c.lock)
+	c.input_held = held
 	sync.mutex_unlock(&c.lock)
 }
 
@@ -177,6 +200,11 @@ Run :: struct {
 	closed_by_viewer: bool,
 	refused:          bool,
 	connected_told:   bool,
+	input_held:       bool,
+	// The quality that the window last saw: a new post only when it changes by a whole millisecond or its loss changes.
+	told_round_trip_milliseconds: u64,
+	told_lost:        bool,
+	last_round_trip_sample: u64,
 }
 
 @(private = "file")
@@ -239,7 +267,7 @@ connection_run :: proc(c: ^Connection) -> session.End {
 			quic.connection_time_passes(run.quic_connection, at)
 			continue
 		}
-		bound := c.settings.input && run.has_stream ? INPUT_WAIT_BOUND : IDLE_WAIT_BOUND
+		bound := run.input_held && run.has_stream ? INPUT_WAIT_BOUND : IDLE_WAIT_BOUND
 		// In microseconds first: a connection with no timer has the largest deadline, past the range of a Duration.
 		wait := time.Duration(min(deadline - at, u64(bound / time.Microsecond))) * time.Microsecond
 		_ = net.set_option(socket, .Receive_Timeout, max(wait, time.Millisecond))
@@ -259,9 +287,13 @@ turn :: proc(run: ^Run) {
 	input: [INPUT_CAPACITY]Input
 	sync.mutex_lock(&c.lock)
 	input_count, end_asked := c.input_count, c.end_asked
+	run.input_held = c.input_held
 	copy(input[:], c.input[:input_count])
 	c.input_count = 0
 	sync.mutex_unlock(&c.lock)
+	if run.input_held {
+		run.protocol_session.input_allowed = true
+	}
 
 	if end_asked && !run.closed_by_viewer && !run.refused && (run.quic_connection.state == .Handshake || run.quic_connection.state == .Connected) {
 		run.closed_by_viewer = true
@@ -293,6 +325,7 @@ turn :: proc(run: ^Run) {
 		stream_read(run, at)
 		// The take of a frame that the read made whole goes in this turn.
 		stream_write(run)
+		publish_quality(run)
 	}
 	buffer: [quic.MAX_DATAGRAM_SIZE]u8
 	for _ in 0 ..< DATAGRAMS_PER_TURN {
@@ -371,6 +404,36 @@ publish_frame :: proc(run: ^Run) {
 	p.frames += 1
 	sync.mutex_unlock(&c.lock)
 	c.on_change(c.on_change_user)
+}
+
+// publish_quality gives the window the round trip of QUIC and its loss, and keeps each new sample for -measure. The
+// window is woken only when what it shows changes: a whole millisecond of round trip, or the loss.
+@(private = "file")
+publish_quality :: proc(run: ^Run) {
+	c, q := run.c, run.quic_connection
+	if !q.has_round_trip_sample {
+		return
+	}
+	lost := q.probe_timeout_count >= LOST_PROBE_TIMEOUTS
+	milliseconds := q.smoothed_round_trip / 1000
+	new_sample := q.latest_round_trip != run.last_round_trip_sample
+	if !new_sample && milliseconds == run.told_round_trip_milliseconds && lost == run.told_lost {
+		return
+	}
+	sync.mutex_lock(&c.lock)
+	p := &c.picture
+	p.round_trip_microseconds = q.smoothed_round_trip
+	p.lost = lost
+	if new_sample {
+		run.last_round_trip_sample = q.latest_round_trip
+		p.round_trip_samples[p.round_trip_sample_count % ROUND_TRIP_SAMPLES] = u32(min(q.latest_round_trip, u64(max(u32))))
+		p.round_trip_sample_count += 1
+	}
+	sync.mutex_unlock(&c.lock)
+	if milliseconds != run.told_round_trip_milliseconds || lost != run.told_lost {
+		run.told_round_trip_milliseconds, run.told_lost = milliseconds, lost
+		c.on_change(c.on_change_user)
+	}
 }
 
 @(private = "file")

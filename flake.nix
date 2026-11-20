@@ -75,13 +75,14 @@
     in
       builtins.head (builtins.match ''APP_VERSION :: "([^"]+)".*'' line);
 
-    # The host tests of the protocol client: no window, no socket, no toolkit.
+    # The host tests of the protocol client and of the rules of the interface: no window, no socket, no toolkit.
     session-tests =
       pkgs.runCommand "modus-viewer-session-tests" {
         nativeBuildInputs = [odin];
       } ''
         export HOME="$TMPDIR"
         odin test ${./src/session} -collection:modus=${modus}/src/library -vet -out:"$TMPDIR/session_tests"
+        odin test ${./src/layout} -vet -out:"$TMPDIR/layout_tests"
         touch $out
       '';
 

@@ -33,7 +33,7 @@ LINUX_DEFINES := [?]string{"-define:FONT_BACKEND=native"}
 
 // The packages with host tests. The session needs no window and no socket, so the flake check runs its tests too.
 @(rodata)
-TESTS := [?]toolbox.Test_Package{{path = "src/session"}}
+TESTS := [?]toolbox.Test_Package{{path = "src/session"}, {path = "src/layout"}}
 
 // The collection of the modus source. Project keeps a slice of it for the life of the tool, so it is a package array.
 modus_collection: [1][2]string
@@ -72,7 +72,7 @@ main :: proc() {
 	toolbox.tool_main("viewertool", {
 		b[0], b[1], b[2],
 		// (not checked by the toolbox: --screenshot takes its value as the next argument, which run_machine reads)
-		{name = "machine", usage = "<port> <machine key> [--screenshot <file.png>]: build the viewer, then connect it to a test machine of modus at 127.0.0.1:<port>, with the input on; with --screenshot, no window: the picture of the window once the first whole screen is drawn (src/md/features/test_machine.md)", run = run_machine},
+		{name = "machine", usage = "<port> <machine key> [--screenshot <file.png> [--bar]] [--measure]: build the viewer, then connect it to a test machine of modus at 127.0.0.1:<port>, with the input on; with --screenshot, no window: the picture of the window once the first whole screen is drawn, with the floating bar for --bar; --measure prints the measures at the end (src/md/features/test_machine.md)", run = run_machine},
 		tk_changelog.command(p),
 	}, toolbox.ROOT_MARK_DEFAULT)
 }

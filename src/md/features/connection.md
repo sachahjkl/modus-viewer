@@ -21,8 +21,12 @@ The thread waits on its socket with a receive timeout: the time to the next dead
 - A datagram of the machine ends the wait at once. The thread drops a datagram from any other sender.
 - The window puts keys, pointer records and the request of the end in a queue under the lock, and makes no system call.
   The thread reads the queue after each wait.
-- So the bound of a wait is the delay of a key: `INPUT_WAIT_BOUND` (4 ms) while the input is on, `IDLE_WAIT_BOUND`
-  (100 ms) else, which is the delay of a Disconnect.
+- So the bound of a wait is the delay of a key: `INPUT_WAIT_BOUND` (4 ms) while the machine holds the input,
+  `IDLE_WAIT_BOUND` (100 ms) else, which is the delay of a Disconnect. The window switches the hold with
+  `connection_hold_input` (Ctrl+Alt, the switch of the bar).
+- After each turn, the thread publishes the smoothed round trip of QUIC and its loss (two probes in a row with no
+  acknowledgement), and keeps each new sample of the round trip for `-measure`. It wakes the window only when the
+  round trip changes by a whole millisecond or the loss changes.
 
 A wake datagram from the window to the loopback port of the thread was refused: it is a system call on the interface
 thread, which never makes one. The cost of the bound is up to 250 wakes of the thread a second while the input is on,
