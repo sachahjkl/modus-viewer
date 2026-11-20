@@ -50,7 +50,8 @@
         mkdir -p $dest
         unzip -qo ${wgpu} -d $dest
         echo 29.0.1.1 > $dest/VERSION
-        makeWrapper $out/lib/odin/odin $out/bin/odin --set-default ODIN_ROOT $out/lib/odin/ --prefix PATH : ${lib.makeBinPath [pkgs.clang pkgs.lld]}
+        # nasm: the library of modus imports assembly for its host builds.
+        makeWrapper $out/lib/odin/odin $out/bin/odin --set-default ODIN_ROOT $out/lib/odin/ --prefix PATH : ${lib.makeBinPath [pkgs.clang pkgs.lld pkgs.nasm]}
       '';
     };
 

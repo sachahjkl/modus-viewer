@@ -38,11 +38,16 @@ TESTS := [?]toolbox.Test_Package{{path = "src/session"}}
 // The collection of the modus source. Project keeps a slice of it for the life of the tool, so it is a package array.
 modus_collection: [1][2]string
 
+// The include folder of the assembler: the host form of the runtime of modus includes `src/runtime/memory.asm`
+// from the root of the modus source, and nasm looks for an include in the folders of -i, not next to the file.
+modus_assembler_flags: [1]string
+
 project :: proc() -> toolbox.Project {
 	return {
 		name = "modus-viewer", changelog = "CHANGELOG.md",
 		version_file = "src/main.odin", version_line = "APP_VERSION :: ", program = PROGRAM,
 		collections = modus_collection[:],
+		defines = modus_assembler_flags[:],
 		linux_defines = LINUX_DEFINES[:],
 		title = "modus viewer", description = DESCRIPTION,
 		copyright = "Copyright (c) 2026 sachahjkl",
@@ -61,6 +66,7 @@ main :: proc() {
 		os.exit(2)
 	}
 	modus_collection[0] = {"modus", fmt.aprintf("%s/src/library", modus)}
+	modus_assembler_flags[0] = fmt.aprintf("-extra-assembler-flags:-i%s/", modus)
 	p := project()
 	b := toolbox.build_commands(build_options())
 	toolbox.tool_main("viewertool", {

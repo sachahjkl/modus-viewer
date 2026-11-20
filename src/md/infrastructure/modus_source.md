@@ -39,19 +39,23 @@ must reach the kernel. The viewer never calls them: it seeds its generator with 
 generator of the operating system (`src/connection/system_random_*.odin`), and never with
 `random.generator_from_context`. No replacement is needed in the viewer.
 
-## No crypto package of Odin
+## The crypto packages of Odin and of modus
 
-The copy of the cryptography of Odin in modus keeps the package names of its origin: `sha2`, `_blake2`, `_subtle`,
-`chacha20`, `_chacha20`, and more. Odin refuses two packages of one name in one program. So a program that imports
-`modus:support/quic` imports no `core:crypto` package, directly or through another package. The modus tool has the
-same limit.
+Odin refuses two packages of one declared name in one program. The copy of the cryptography of Odin in modus declares
+names of its own (`modus_sha2`, `modus__subtle`, and the others), so a program imports it beside `core:crypto`:
+`gt:render` imports `core:crypto/hash`, and `gt:ui` reaches `core:crypto/legacy/md5` through `gt:desktop`. The viewer
+needs a modus that has those names: the pin of the flake is at or after that change.
 
-- The viewer reads its random bytes from the operating system through `core:os` and `core:sys/windows`, and erases a
-  secret with volatile stores of its own (`src/connection/erase.odin`).
-- `gt:render` imports `core:crypto/hash` (the SHA-256 of a shader source), and `gt:ui` reaches
-  `core:crypto/legacy/md5` through `gt:desktop`. The window of the viewer imports both. Until one side changes, the
-  program with the window does not build; the session and its tests do. The two ways open: the toolkit hashes its
-  shaders and its thumbnails with no crypto package, or modus gives its copy package names of its own.
+- The viewer still reads its random bytes from the operating system through `core:os` and `core:sys/windows`, and
+  erases a secret with volatile stores of its own (`src/connection/erase.odin`): it needs no crypto package for that.
+
+## The assembler of the host form
+
+The host form of the runtime of modus, `src/runtime/memory_for_host_tests.asm`, includes `src/runtime/memory.asm`.
+nasm looks for an include in the current folder and in the folders of `-i`, never next to the file. The tool of modus
+runs from the root of its repository; the viewer does not. So the tool of the viewer gives each odin command
+`-extra-assembler-flags:-i$MODUS_SOURCE/` (`modus_assembler_flags` in `tools/viewertool/main.odin`), and the flake puts
+`nasm` on the path of the wrapper of odin.
 
 ## The refused forms
 
