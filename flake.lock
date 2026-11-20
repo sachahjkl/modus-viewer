@@ -39,11 +39,11 @@
     "modus": {
       "flake": false,
       "locked": {
-        "lastModified": 1795141621,
-        "narHash": "sha256-yFAIqZCm9gfoAA3fC+bTQmmf7nA+GuJHtGWTw7SjThA=",
+        "lastModified": 1795149102,
+        "narHash": "sha256-9MI2PmULBYfv6vF9ZbCm889MS32y7XJW/LkBJYpodSQ=",
         "owner": "sachahjkl",
         "repo": "modus",
-        "rev": "f4e31a39dac9bd5b85edfb24f237631623c9b9bc",
+        "rev": "6975238ad9185a7d4859dcd316ed04ca220ed26c",
         "type": "github"
       },
       "original": {
