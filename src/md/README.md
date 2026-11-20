@@ -43,6 +43,8 @@ own. This folder records the design on the side of the viewer.
 - [features/window.md](features/window.md): the form, the screen scaled to the window, the pointer mark, the keys and
   the pointer that go to the machine
 - [features/test_machine.md](features/test_machine.md): the command that connects the viewer to a test machine of
-  modus, and what the tool of modus must give for it
+  modus, and what `modustool run --remote-display` gives for it
+- [features/screenshot.md](features/screenshot.md): the run with no window that writes the picture of the window once
+  the first whole screen of the machine is drawn; its condition, its bound and its failures
 - [infrastructure/modus_source.md](infrastructure/modus_source.md): how the viewer takes the source of modus, which
   packages build on a host, and which do not

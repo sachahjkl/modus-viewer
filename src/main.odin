@@ -8,6 +8,7 @@ import "core:os"
 import "core:strconv"
 import "core:strings"
 import "core:thread"
+import "core:time"
 import "gt:draw"
 import host "gt:host"
 import "gt:platform"
@@ -20,7 +21,7 @@ import "session"
 APP_NAME :: "modus-viewer"
 APP_VERSION :: "0.0.0"
 WINDOW_TITLE :: "modus viewer"
-USAGE :: "usage: modus-viewer [-address:<host>:<port>] [-machine-key:<64 hexadecimal digits>] [-input]"
+USAGE :: "usage: modus-viewer [-address:<host>:<port>] [-machine-key:<64 hexadecimal digits>] [-input] [-headless] [-screenshot:<file.png>] | -print-key"
 
 // Why the form does not start a connection.
 Form_Problem :: enum u8 {
@@ -71,6 +72,10 @@ App :: struct {
 	pending_release:  bool, // A key that the toolkit does not name has no release event: the release goes with the press.
 	pointer_buttons:  u32,
 	wheel_rest:       f32,
+	// A run with no window, and its screenshot (src/md/features/screenshot.md).
+	headless:         bool,
+	screenshot:       Screenshot,
+	screen_drawn:     bool, // A frame drew a whole screen of the machine: the first viewer frame of a session is whole.
 }
 
 main :: proc() {
@@ -85,12 +90,24 @@ main :: proc() {
 			key_argument = argument[len("-machine-key:"):]
 		case argument == "-input":
 			app.input = true
+		case argument == "-headless":
+			app.headless = true
+		case strings.has_prefix(argument, "-screenshot:") && len(argument) > len("-screenshot:"):
+			delete(app.screenshot.path)
+			app.screenshot.path = strings.clone(argument[len("-screenshot:"):])
+			app.screenshot.phase = .Waiting
+		case argument == "-print-key" && len(os.args) == 2:
+			os.exit(viewer_key_print())
 		case:
 			fmt.eprintln(USAGE)
 			os.exit(2)
 		}
 	}
 	app.connect_at_start = address_argument != "" && key_argument != ""
+	if app.screenshot.phase != .Off && !app.connect_at_start {
+		fmt.eprintln("modus-viewer: -screenshot needs -address and -machine-key: the screenshot is of a session that starts with the viewer")
+		os.exit(2)
+	}
 	// The viewer key and each connection need the generator of the operating system: with none, the viewer stops now.
 	probe: [32]u8
 	if !connection.system_random_fill(probe[:]) {
@@ -99,7 +116,8 @@ main :: proc() {
 	}
 	connection.erase_secret_bytes(&probe, size_of(probe))
 
-	if !host.host_open(&app.main, &app.shared, {title = WINDOW_TITLE, size = {1280, 860}}, build, app) {
+	// With -headless, the window is drawn into a picture by the software renderer, and no window opens on the desktop.
+	if !host.host_open(&app.main, &app.shared, {title = WINDOW_TITLE, size = {1280, 860}, headless = app.headless}, build, app) {
 		os.exit(1)
 	}
 	app.main.input = input_hook
@@ -109,11 +127,21 @@ main :: proc() {
 	ui.line_edit_set(&app.machine_key, key_argument)
 	viewer_key_load_start(app)
 
-	platform.show_window(app.main.win)
-	for !platform.is_closed(app.main.win) {
-		host.hosts_wait({&app.main})
-		host.host_frame(&app.main)
+	if !app.headless {
+		platform.show_window(app.main.win)
 	}
+	app.screenshot.started = time.tick_now()
+	for !platform.is_closed(app.main.win) && !screenshot_finished(&app.screenshot) {
+		if app.screenshot.phase == .Off {
+			host.hosts_wait({&app.main})
+		} else if app.main.settle == 0 {
+			// A post wakes the wait at once; the period only lets the loop check the hang bound of the screenshot.
+			platform.wait_event(app.main.win, SCREENSHOT_CHECK_PERIOD_MILLISECONDS)
+		}
+		host.host_frame(&app.main)
+		screenshot_step(app)
+	}
+	exit_code := app.screenshot.phase == .Failed ? 1 : 0
 
 	// The window is gone: the end of the connection and the worker can be waited for.
 	if app.viewer_connection != nil {
@@ -133,7 +161,11 @@ main :: proc() {
 	ui.line_edit_destroy(&app.machine_key)
 	delete(app.end_sentence)
 	delete(app.session_address)
+	screenshot_destroy(&app.screenshot)
 	host.host_close(&app.main)
+	if exit_code != 0 {
+		os.exit(exit_code)
+	}
 }
 
 // app_key_ready runs when the viewer key arrived.
@@ -257,6 +289,8 @@ draw_screen :: proc(box: ^ui.Box, user: rawptr, dc: ^draw.Context) {
 	left, top := area.min.x + (area_width - width) * 0.5, area.min.y + (area_height - height) * 0.5
 	app.screen_rect = {{left, top}, {left + width, top + height}}
 	draw.image(dc, app.texture, app.screen_rect)
+	// The texture holds a whole viewer frame once one came: the first frame of a session covers the whole screen.
+	app.screen_drawn = app.frames >= 1
 	// A rectangle of four zeros covers nothing: the machine draws no pointer.
 	pointer := app.pointer
 	if pointer.right != 0 || pointer.bottom != 0 {
@@ -296,6 +330,7 @@ form_connect :: proc(app: ^App) {
 	app.pointer = {}
 	app.frames = 0
 	app.screen_rect = {}
+	app.screen_drawn = false
 	app.has_pending_key = false
 	app.pointer_buttons = 0
 	app.wheel_rest = 0

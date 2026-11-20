@@ -4,6 +4,7 @@ package modus_viewer
 // worker posts its result to the window.
 
 import "core:encoding/hex"
+import "core:fmt"
 import "core:os"
 import "core:thread"
 import secrets "gt:secrets"
@@ -80,6 +81,23 @@ viewer_key_arrived :: proc(data: rawptr, _: u64) {
 	connection.erase_secret_bytes(arrival, size_of(Key_Arrival))
 	free(arrival)
 	app_key_ready(app)
+}
+
+// viewer_key_print is `modus-viewer -print-key`: it prints the public key of the kept viewer key, which a principal
+// allows before the viewer connects, and gives the exit code. With no window, it may wait on the disk and the store.
+// A key of this run only is refused: it would be gone when the viewer starts again to connect.
+viewer_key_print :: proc() -> int {
+	key := viewer_key_load()
+	defer connection.erase_secret_bytes(&key.private_key, size_of(key.private_key))
+	switch key.origin {
+	case .Kept, .Made:
+		fmt.println(hex_of(key.public_key[:]))
+		return 0
+	case .Loading, .Run_Only_No_Store, .Run_Only_Not_Opened, .Run_Only_Not_Written, .No_System_Random:
+		fmt.eprintfln("modus-viewer: no kept viewer key to print: %s", VIEWER_KEY_ORIGIN_SENTENCES[key.origin])
+		return 1
+	}
+	return 1
 }
 
 // viewer_key_load reads the sealed key, or makes one. It waits on the disk and on the store of secrets.

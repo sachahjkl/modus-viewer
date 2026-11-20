@@ -23,3 +23,13 @@ viewer.
 
 The line to type in a console of the machine, with the public key in it:
 `remote_display_allow("<public key>", "view_and_input")`. The public key is not a secret.
+
+## The key for a program
+
+`modus-viewer -print-key` prints the public key of the kept key on the standard output, with no window, and ends with
+0. A program that allows the viewer before it connects reads it there, as `modustool run --remote-display` does
+(`test_machine.md`). It reads and seals the key on its one thread: there is no window to keep responsive.
+
+- A key of this run only is refused, with its sentence and the code 1: the key would be gone when the viewer starts
+  again to connect, and the allow would name a key that nobody holds.
+- A program never gets the private key: the viewer prints the public key only.

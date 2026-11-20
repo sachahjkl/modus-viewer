@@ -18,9 +18,15 @@ The machine is a machine of [modus](https://github.com/sachahjkl/modus). The vie
 
 ## Use
 
-    modus-viewer [-address:<host>:<port>] [-machine-key:<64 hexadecimal digits>] [-input]
+    modus-viewer [-address:<host>:<port>] [-machine-key:<64 hexadecimal digits>] [-input] [-headless] [-screenshot:<file.png>]
+    modus-viewer -print-key
 
 With an address and a machine key, the viewer connects at its start. Else it shows a form.
+
+- `-headless`: no window on the desktop; the window is drawn into a picture.
+- `-screenshot:<file.png>`: once the first whole screen of the machine is drawn, the viewer writes the picture of its
+  window to the file and ends.
+- `-print-key`: prints the public key of the viewer key, for an allow on the machine, and ends.
 
 ## Build
 

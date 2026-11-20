@@ -71,7 +71,8 @@ main :: proc() {
 	b := toolbox.build_commands(build_options())
 	toolbox.tool_main("viewertool", {
 		b[0], b[1], b[2],
-		{name = "machine", usage = "<port> <machine key>: build the viewer, then connect it to a test machine of modus at 127.0.0.1:<port>, with the input on (src/md/features/test_machine.md)", run = run_machine, checked = true, positionals = 2},
+		// (not checked by the toolbox: --screenshot takes its value as the next argument, which run_machine reads)
+		{name = "machine", usage = "<port> <machine key> [--screenshot <file.png>]: build the viewer, then connect it to a test machine of modus at 127.0.0.1:<port>, with the input on; with --screenshot, no window: the picture of the window once the first whole screen is drawn (src/md/features/test_machine.md)", run = run_machine},
 		tk_changelog.command(p),
 	}, toolbox.ROOT_MARK_DEFAULT)
 }
