@@ -2,6 +2,10 @@
 
 ## Now
 
+- **A window that builds.** The window imports gui_toolkit, whose render package hashes with `core:crypto`, and QUIC
+  of modus, whose copy of that cryptography has the same package names; one program cannot hold both. One side must
+  change before the viewer opens. [Design](src/md/infrastructure/modus_source.md)
+
 - **A machine of `modustool run` in one command.** `viewertool machine` reaches the machine once the peer of
   `modustool run` relays a port of the loopback to the UDP port 7101 of `remote_display` and prints that port. The
   relay is a change of the modus repository. [Design](src/md/features/test_machine.md)

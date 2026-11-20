@@ -56,4 +56,5 @@ code, for the window. The kinds:
 | `Transport_Code` | Another transport code, of either side |
 | `Address_Not_Found` | The name of the host did not resolve |
 | `No_Socket` | The system gave no UDP socket |
+| `No_System_Random` | The generator of the operating system gave no seed for the random generator of QUIC |
 | `Start_Refused` | The QUIC client did not start |

@@ -6,7 +6,9 @@ viewer.
 
 ## Where it is kept
 
-- The private key is 32 random bytes from the generator of the host system (`core:crypto`).
+- The private key is 32 random bytes from the generator of the operating system: `/dev/urandom` on Linux and macOS,
+  `BCryptGenRandom` on Windows (`src/connection/system_random_*.odin`). If the system gives no bytes, the viewer
+  makes no key and no connection, and says so; a fixed key or seed never takes their place.
 - It is sealed with `gt:secrets` for the account of the user: the Secret Service on Linux, DPAPI on Windows. The
   viewer writes the sealed field in the file `viewer_key` of its configuration folder. The file never holds the key
   in clear.

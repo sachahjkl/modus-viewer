@@ -137,7 +137,8 @@ the_space_ends_at_the_end_of_the_record :: proc(t: ^testing.T) {
 	testing.expect_value(t, session_received(&s, copy(session_receive_space(&s), bytes[HEADER - 1:])), Outcome.Need_More)
 	testing.expect_value(t, len(session_receive_space(&s)), size_of(protocol.Screen_Size_Body))
 	// Two records in one slice: the first call takes the first record only.
-	both := make([]u8, 0, 64, context.temp_allocator)
+	// A slice has no capacity of its own: append_bytes makes each longer slice.
+	both: []u8
 	two := [2][]u8{bytes[HEADER:], record_bytes(.Screen_Size, protocol.Screen_Size_Body{8, 8})}
 	for part in two {
 		both = append_bytes(both, part)

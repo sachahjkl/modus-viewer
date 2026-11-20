@@ -3,7 +3,6 @@ package modus_viewer
 // The viewer key (src/md/features/viewer_key.md): read and sealed on a worker, never on the interface thread. The
 // worker posts its result to the window.
 
-import "core:crypto"
 import "core:encoding/hex"
 import "core:os"
 import "core:thread"
@@ -26,6 +25,7 @@ Viewer_Key_Origin :: enum u8 {
 	Run_Only_No_Store,    // No store of secrets, or no configuration folder: a key of this run only.
 	Run_Only_Not_Opened,  // A kept key exists, and the store cannot open it: a key of this run only.
 	Run_Only_Not_Written, // A new key was sealed, and its file could not be written: a key of this run only.
+	No_System_Random,     // The generator of the operating system gave no bytes: no key, and no connection.
 }
 
 @(rodata)
@@ -36,6 +36,7 @@ VIEWER_KEY_ORIGIN_SENTENCES := [Viewer_Key_Origin]string {
 	.Run_Only_No_Store    = "No store of secrets answers: this key lasts until the viewer closes.",
 	.Run_Only_Not_Opened  = "The store of secrets cannot open the kept key (a locked keyring, or another account): this key lasts until the viewer closes.",
 	.Run_Only_Not_Written = "The file of the key could not be written: this key lasts until the viewer closes.",
+	.No_System_Random     = "The generator of the operating system gave no random bytes: this viewer has no key, and connects to no machine.",
 }
 
 Viewer_Key :: struct {
@@ -65,7 +66,7 @@ viewer_key_worker :: proc(t: ^thread.Thread) {
 	arrival.app = (^App)(t.data)
 	arrival.key = viewer_key_load()
 	if !ui.post(&arrival.app.main.state, viewer_key_arrived, arrival) {
-		crypto.zero_explicit(arrival, size_of(Key_Arrival))
+		connection.erase_secret_bytes(arrival, size_of(Key_Arrival))
 		free(arrival)
 	}
 }
@@ -76,7 +77,7 @@ viewer_key_arrived :: proc(data: rawptr, _: u64) {
 	arrival := (^Key_Arrival)(data)
 	app := arrival.app
 	app.key = arrival.key
-	crypto.zero_explicit(arrival, size_of(Key_Arrival))
+	connection.erase_secret_bytes(arrival, size_of(Key_Arrival))
 	free(arrival)
 	app_key_ready(app)
 }
@@ -101,18 +102,21 @@ viewer_key_load :: proc() -> (key: Viewer_Key) {
 			return key_of_this_run(.Run_Only_Not_Opened)
 		}
 		copy(key.private_key[:], decoded)
-		crypto.zero_explicit(raw_data(decoded), len(decoded))
-		crypto.zero_explicit(raw_data(secret), len(secret))
+		connection.erase_secret_bytes(raw_data(decoded), len(decoded))
+		connection.erase_secret_bytes(raw_data(secret), len(secret))
 		return key_finish(key, .Kept)
 	}
 	key = key_of_this_run(.Made)
+	if key.origin == .No_System_Random {
+		return key
+	}
 	if path == "" {
 		key.origin = .Run_Only_No_Store
 		return key
 	}
 	encoded := hex.encode(key.private_key[:], context.temp_allocator)
 	field, sealed := secrets.seal(SECRETS_APP, SECRET_NAME, string(encoded), context.temp_allocator)
-	crypto.zero_explicit(raw_data(encoded), len(encoded))
+	connection.erase_secret_bytes(raw_data(encoded), len(encoded))
 	if sealed != .Sealed {
 		key.origin = .Run_Only_No_Store
 		return key
@@ -124,11 +128,14 @@ viewer_key_load :: proc() -> (key: Viewer_Key) {
 	return key
 }
 
-// key_of_this_run draws a new key from the generator of the host system.
+// key_of_this_run draws a new key from the generator of the operating system. With no bytes, there is no key.
 @(private = "file")
 key_of_this_run :: proc(origin: Viewer_Key_Origin) -> Viewer_Key {
 	key: Viewer_Key
-	crypto.rand_bytes(key.private_key[:])
+	if !connection.system_random_fill(key.private_key[:]) {
+		connection.erase_secret_bytes(&key.private_key, size_of(key.private_key))
+		return {origin = .No_System_Random}
+	}
 	return key_finish(key, origin)
 }
 

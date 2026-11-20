@@ -37,7 +37,7 @@ FORM_PROBLEM_SENTENCES := [Form_Problem]string {
 	.Address_Empty               = "Give the address of the machine: a name or an IPv4 address, then :port if it is not 7101.",
 	.Port_Out_Of_Range           = "The port is a number from 1 to 65535.",
 	.Machine_Key_Not_Hexadecimal = "The machine key is 64 hexadecimal digits: the key that remote_display writes on the log of the machine.",
-	.Viewer_Key_Not_Ready        = "The viewer key is still being read.",
+	.Viewer_Key_Not_Ready        = "The viewer has no key yet: the sentence under its line says why.",
 }
 
 App :: struct {
@@ -54,7 +54,7 @@ App :: struct {
 	form_problem:     Form_Problem,
 	end_sentence:     string, // The sentence of the last end: owned.
 	// The session.
-	connection:       ^connection.Connection,
+	viewer_connection: ^connection.Connection,
 	session_address:  string, // Owned.
 	session_input:    bool,
 	connected:        bool,
@@ -91,6 +91,13 @@ main :: proc() {
 		}
 	}
 	app.connect_at_start = address_argument != "" && key_argument != ""
+	// The viewer key and each connection need the generator of the operating system: with none, the viewer stops now.
+	probe: [32]u8
+	if !connection.system_random_fill(probe[:]) {
+		fmt.eprintln("modus-viewer: the generator of the operating system gave no random bytes: the viewer cannot make its key or a connection, and stops")
+		os.exit(1)
+	}
+	connection.erase_secret_bytes(&probe, size_of(probe))
 
 	if !host.host_open(&app.main, &app.shared, {title = WINDOW_TITLE, size = {1280, 860}}, build, app) {
 		os.exit(1)
@@ -109,9 +116,9 @@ main :: proc() {
 	}
 
 	// The window is gone: the end of the connection and the worker can be waited for.
-	if app.connection != nil {
-		connection.connection_end_and_wait(app.connection)
-		app.connection = nil
+	if app.viewer_connection != nil {
+		connection.connection_end_and_wait(app.viewer_connection)
+		app.viewer_connection = nil
 	}
 	thread.join(app.key_worker)
 	thread.destroy(app.key_worker)
@@ -141,7 +148,7 @@ app_key_ready :: proc(app: ^App) {
 
 // allow_line_update writes the line that allows the viewer key, with the uses that the switch of the input names.
 allow_line_update :: proc(app: ^App) {
-	if app.key.origin == .Loading {
+	if app.key.origin == .Loading || app.key.origin == .No_System_Random {
 		return
 	}
 	uses := app.input ? "view_and_input" : "view"
@@ -153,7 +160,7 @@ allow_line_update :: proc(app: ^App) {
 
 build :: proc(h: ^host.Host, size: host.Vec2) {
 	app := (^App)(h.user)
-	if app.connection != nil {
+	if app.viewer_connection != nil {
 		build_session(app)
 	} else {
 		build_form(app)
@@ -214,7 +221,7 @@ build_session :: proc(app: ^App) {
 			ui.next({width = ui.text_size(em), height = ui.px(em * 2)})
 			if ui.button("disconnect", "Disconnect").clicked {
 				app.end_asked = true
-				connection.connection_end(app.connection)
+				connection.connection_end(app.viewer_connection)
 			}
 		}
 		ui.spacer(ui.px(em * 0.6))
@@ -263,7 +270,7 @@ draw_screen :: proc(box: ^ui.Box, user: rawptr, dc: ^draw.Context) {
 // The connection
 
 form_connect :: proc(app: ^App) {
-	if app.key.origin == .Loading {
+	if app.key.origin == .Loading || app.key.origin == .No_System_Random {
 		app.form_problem = .Viewer_Key_Not_Ready
 		return
 	}
@@ -299,7 +306,7 @@ form_connect :: proc(app: ^App) {
 		viewer_private_key = app.key.private_key,
 		input              = app.input,
 	}
-	app.connection = connection.connection_start(settings, connection_wake, app)
+	app.viewer_connection = connection.connection_start(settings, connection_wake, app)
 }
 
 // connection_wake runs on the thread of the connection: it only posts to the window.
@@ -312,7 +319,7 @@ connection_wake :: proc(user: rawptr) {
 // connection_changed runs on the interface thread: it uploads the damage, takes the pointer and the end.
 connection_changed :: proc(data: rawptr, _: u64) {
 	app := (^App)(data)
-	c := app.connection
+	c := app.viewer_connection
 	if c == nil {
 		// A post of a connection that ended before it ran.
 		return
@@ -345,7 +352,7 @@ connection_changed :: proc(data: rawptr, _: u64) {
 	connection.picture_unlock(c)
 	if ended {
 		connection.connection_destroy(c)
-		app.connection = nil
+		app.viewer_connection = nil
 		app.end_sentence = session.end_sentence(end)
 		if app.texture != 0 {
 			render.destroy_texture(r, app.texture)
@@ -398,7 +405,7 @@ hex_of :: proc(bytes: []u8) -> string {
 // to the machine do not reach the interface; a press on the bar does.
 input_hook :: proc(h: ^host.Host, events: []platform.Event) -> []platform.Event {
 	app := (^App)(h.user)
-	c := app.connection
+	c := app.viewer_connection
 	if c == nil || !app.session_input || !app.connected || app.end_asked || app.screen.width == 0 {
 		return events
 	}

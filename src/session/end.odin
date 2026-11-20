@@ -18,6 +18,7 @@ End_Kind :: enum u8 {
 	Transport_Code,        // Another code of the transport, of either side: End.code, End.by_machine.
 	Address_Not_Found,     // The name of the host did not resolve.
 	No_Socket,             // The system gave no UDP socket.
+	No_System_Random,      // The generator of the operating system gave no seed for the random generator of QUIC.
 	Start_Refused,         // The QUIC client did not start.
 }
 
@@ -85,6 +86,8 @@ end_sentence :: proc(end: End, allocator := context.allocator) -> string {
 		return fmt.aprint("The address names no machine that this computer can find.", allocator = allocator)
 	case .No_Socket:
 		return fmt.aprint("The system gave this viewer no UDP socket.", allocator = allocator)
+	case .No_System_Random:
+		return fmt.aprint("The generator of the operating system gave no random bytes: this viewer makes no connection without them.", allocator = allocator)
 	case .Start_Refused:
 		return fmt.aprint("The QUIC client of this viewer did not start.", allocator = allocator)
 	}

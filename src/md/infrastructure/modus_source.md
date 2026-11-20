@@ -36,8 +36,22 @@ The viewer compiles packages of the modus repository into itself. It does not co
 procedures (`system_enter`, `thread_record`). On a host, `modus:support/system/kernel_entry_on_the_host.odin`
 (`#+build !freestanding`) gives the linker those two names. Each one stops the program at once, because no host path
 must reach the kernel. The viewer never calls them: it seeds its generator with `random.generator_seed` from the
-generator of the host system (`core:crypto`), and never with `random.generator_from_context`. No replacement is
-needed in the viewer.
+generator of the operating system (`src/connection/system_random_*.odin`), and never with
+`random.generator_from_context`. No replacement is needed in the viewer.
+
+## No crypto package of Odin
+
+The copy of the cryptography of Odin in modus keeps the package names of its origin: `sha2`, `_blake2`, `_subtle`,
+`chacha20`, `_chacha20`, and more. Odin refuses two packages of one name in one program. So a program that imports
+`modus:support/quic` imports no `core:crypto` package, directly or through another package. The modus tool has the
+same limit.
+
+- The viewer reads its random bytes from the operating system through `core:os` and `core:sys/windows`, and erases a
+  secret with volatile stores of its own (`src/connection/erase.odin`).
+- `gt:render` imports `core:crypto/hash` (the SHA-256 of a shader source), and `gt:ui` reaches
+  `core:crypto/legacy/md5` through `gt:desktop`. The window of the viewer imports both. Until one side changes, the
+  program with the window does not build; the session and its tests do. The two ways open: the toolkit hashes its
+  shaders and its thumbnails with no crypto package, or modus gives its copy package names of its own.
 
 ## The refused forms
 

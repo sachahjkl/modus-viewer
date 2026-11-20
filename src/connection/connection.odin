@@ -4,7 +4,6 @@
 // the lock.
 package connection
 
-import "core:crypto"
 import "core:net"
 import "core:sync"
 import "core:thread"
@@ -66,7 +65,7 @@ Connection :: struct {
 	on_change:       proc(user: rawptr),
 	on_change_user:  rawptr,
 	settings:        Settings,
-	thread:          ^thread.Thread,
+	worker_thread:   ^thread.Thread,
 }
 
 // connection_start starts the thread of a connection. on_change runs on that thread: it posts to the window.
@@ -76,17 +75,17 @@ connection_start :: proc(settings: Settings, on_change: proc(user: rawptr), user
 	c.settings.host = clone_string(settings.host)
 	c.on_change, c.on_change_user = on_change, user
 	c.picture.rgba = make([]u8, protocol.SCREEN_WIDTH_LIMIT * protocol.SCREEN_HEIGHT_LIMIT * 4)
-	c.thread = thread.create(connection_thread)
-	c.thread.data = c
-	thread.start(c.thread)
+	c.worker_thread = thread.create(connection_thread)
+	c.worker_thread.data = c
+	thread.start(c.worker_thread)
 	return c
 }
 
 // connection_destroy frees a connection whose thread ended (Picture.ended). It does not wait.
 connection_destroy :: proc(c: ^Connection) {
-	thread.join(c.thread)
-	thread.destroy(c.thread)
-	crypto.zero_explicit(&c.settings.viewer_private_key, size_of(c.settings.viewer_private_key))
+	thread.join(c.worker_thread)
+	thread.destroy(c.worker_thread)
+	erase_secret_bytes(&c.settings.viewer_private_key, size_of(c.settings.viewer_private_key))
 	delete(c.picture.rgba)
 	delete(c.settings.host)
 	free(c)
@@ -142,7 +141,7 @@ public_key_of :: proc(private_key: [32]u8) -> (public_key: [32]u8, ok: bool) {
 	result := public_key[:]
 	error: errors.Error_Record
 	ok = primitives.ed25519_public_key(&secret, &result, &error) >= 0
-	crypto.zero_explicit(&private, size_of(private))
+	erase_secret_bytes(&private, size_of(private))
 	return public_key, ok
 }
 
@@ -166,12 +165,12 @@ Run :: struct {
 	c:                ^Connection,
 	socket:           net.UDP_Socket,
 	machine:          net.Endpoint,
-	quic:             ^quic.Connection,
+	quic_connection:  ^quic.Connection,
 	streams:          []quic.Stream,
 	configuration:    quic.Connection_Configuration,
 	cryptography:     quic.Cryptography,
 	generator:        random.Generator,
-	session:          session.Session,
+	protocol_session: session.Session,
 	start:            time.Tick,
 	stream:           u64,
 	has_stream:       bool,
@@ -196,15 +195,17 @@ connection_run :: proc(c: ^Connection) -> session.End {
 	defer free(run)
 	run.c, run.socket, run.machine = c, socket, machine
 	// The record has about 88 KiB: it never goes on a stack.
-	run.quic = new(quic.Connection)
-	defer free(run.quic)
+	run.quic_connection = new(quic.Connection)
+	defer free(run.quic_connection)
 	run.streams = make([]quic.Stream, 1)
 	defer delete(run.streams)
 	run.cryptography = cryptography_of_the_host()
 	seed: [random.SEED_SIZE]u8
-	crypto.rand_bytes(seed[:])
-	// The generator of the host system draws from the entropy of the system: at least the strength of the generator of
-	// the processor, which QUIC asks for.
+	if !system_random_fill(seed[:]) {
+		return {kind = .No_System_Random}
+	}
+	// The generator of the operating system draws from the entropy of the system: at least the strength of the
+	// generator of the processor, which QUIC asks for.
 	if !random.generator_seed(&run.generator, &seed, .Processor) {
 		return {kind = .Start_Refused}
 	}
@@ -213,29 +214,29 @@ connection_run :: proc(c: ^Connection) -> session.End {
 	run.configuration.tls.application_protocol_length = copy(run.configuration.tls.application_protocol[:], protocol.APPLICATION_PROTOCOL)
 	run.configuration.tls.server_public_key = c.settings.machine_key
 	run.configuration.tls.client_private_key = c.settings.viewer_private_key
-	defer crypto.zero_explicit(&run.configuration.tls.client_private_key, size_of(run.configuration.tls.client_private_key))
-	session.session_init(&run.session, c.settings.input)
-	defer session.session_destroy(&run.session)
+	defer erase_secret_bytes(&run.configuration.tls.client_private_key, size_of(run.configuration.tls.client_private_key))
+	session.session_init(&run.protocol_session, c.settings.input)
+	defer session.session_destroy(&run.protocol_session)
 	run.start = time.tick_now()
 
 	error: errors.Error_Record
-	if !quic.connection_start_client(run.quic, run.streams, &run.configuration, &run.cryptography, &run.generator, now(run), &error) {
+	if !quic.connection_start_client(run.quic_connection, run.streams, &run.configuration, &run.cryptography, &run.generator, now(run), &error) {
 		return {kind = .Start_Refused}
 	}
 	datagram: [2048]u8
 	for {
 		turn(run)
-		if run.quic.state == .Closed {
+		if run.quic_connection.state == .Closed {
 			break
 		}
 		// The close of this side went out: the thread ends with no drain, so a Disconnect is at once.
-		if run.quic.state == .Closing && (run.closed_by_viewer || run.refused) {
+		if run.quic_connection.state == .Closing && (run.closed_by_viewer || run.refused) {
 			break
 		}
 		at := now(run)
-		deadline := quic.connection_deadline(run.quic)
+		deadline := quic.connection_deadline(run.quic_connection)
 		if deadline <= at {
-			quic.connection_time_passes(run.quic, at)
+			quic.connection_time_passes(run.quic_connection, at)
 			continue
 		}
 		bound := c.settings.input && run.has_stream ? INPUT_WAIT_BOUND : IDLE_WAIT_BOUND
@@ -244,7 +245,7 @@ connection_run :: proc(c: ^Connection) -> session.End {
 		_ = net.set_option(socket, .Receive_Timeout, max(wait, time.Millisecond))
 		count, from, receive_error := net.recv_udp(socket, datagram[:])
 		if receive_error == nil && count > 0 && same_endpoint(from, machine) {
-			quic.connection_datagram_receive(run.quic, datagram[:count], now(run), &error)
+			quic.connection_datagram_receive(run.quic_connection, datagram[:count], now(run), &error)
 		}
 	}
 	return end_of(run)
@@ -262,11 +263,11 @@ turn :: proc(run: ^Run) {
 	c.input_count = 0
 	sync.mutex_unlock(&c.lock)
 
-	if end_asked && !run.closed_by_viewer && !run.refused && (run.quic.state == .Handshake || run.quic.state == .Connected) {
+	if end_asked && !run.closed_by_viewer && !run.refused && (run.quic_connection.state == .Handshake || run.quic_connection.state == .Connected) {
 		run.closed_by_viewer = true
-		quic.connection_close(run.quic, u64(protocol.Display_Error.None), at)
+		quic.connection_close(run.quic_connection, u64(protocol.Display_Error.None), at)
 	}
-	if run.quic.state == .Connected {
+	if run.quic_connection.state == .Connected {
 		if !run.connected_told {
 			run.connected_told = true
 			sync.mutex_lock(&c.lock)
@@ -275,17 +276,17 @@ turn :: proc(run: ^Run) {
 			c.on_change(c.on_change_user)
 		}
 		if !run.has_stream {
-			run.stream, run.has_stream = quic.stream_open(run.quic)
+			run.stream, run.has_stream = quic.stream_open(run.quic_connection)
 		}
 	}
-	if run.has_stream && run.quic.state == .Connected {
+	if run.has_stream && run.quic_connection.state == .Connected {
 		for record in input[:input_count] {
 			// A refused or full record stays in the viewer: the session already checked it against the border.
 			switch value in record {
 			case protocol.Key_Body:
-				_ = session.session_key(&run.session, value)
+				_ = session.session_key(&run.protocol_session, value)
 			case protocol.Pointer_Body:
-				_ = session.session_pointer(&run.session, value)
+				_ = session.session_pointer(&run.protocol_session, value)
 			}
 		}
 		stream_write(run)
@@ -295,7 +296,7 @@ turn :: proc(run: ^Run) {
 	}
 	buffer: [quic.MAX_DATAGRAM_SIZE]u8
 	for _ in 0 ..< DATAGRAMS_PER_TURN {
-		length := quic.connection_datagram_send(run.quic, buffer[:], at)
+		length := quic.connection_datagram_send(run.quic_connection, buffer[:], at)
 		if length == 0 {
 			break
 		}
@@ -306,31 +307,31 @@ turn :: proc(run: ^Run) {
 @(private = "file")
 stream_write :: proc(run: ^Run) {
 	for {
-		waiting := session.session_outgoing(&run.session)
+		waiting := session.session_outgoing(&run.protocol_session)
 		if len(waiting) == 0 {
 			return
 		}
-		taken := quic.stream_write(run.quic, run.stream, waiting, false)
+		taken := quic.stream_write(run.quic_connection, run.stream, waiting, false)
 		if taken == 0 {
 			return
 		}
-		session.session_written(&run.session, taken)
+		session.session_written(&run.protocol_session, taken)
 	}
 }
 
 // stream_read gives the session the bytes of the stream, at most the rest of one record at a time.
 @(private = "file")
 stream_read :: proc(run: ^Run, at: u64) {
-	for run.quic.state == .Connected {
-		space := session.session_receive_space(&run.session)
+	for run.quic_connection.state == .Connected {
+		space := session.session_receive_space(&run.protocol_session)
 		if space == nil {
 			return
 		}
-		count, _, reset := quic.stream_read(run.quic, run.stream, space)
+		count, _, reset := quic.stream_read(run.quic_connection, run.stream, space)
 		if reset || count == 0 {
 			return
 		}
-		switch session.session_received(&run.session, count) {
+		switch session.session_received(&run.protocol_session, count) {
 		case .Need_More, .Taken, .Screen_Size:
 		case .Pointer_Moved:
 			publish_pointer(run)
@@ -338,7 +339,7 @@ stream_read :: proc(run: ^Run, at: u64) {
 			publish_frame(run)
 		case .Refused:
 			run.refused = true
-			quic.connection_close(run.quic, u64(protocol.Display_Error.Bad_Record), at)
+			quic.connection_close(run.quic_connection, u64(protocol.Display_Error.Bad_Record), at)
 			return
 		}
 	}
@@ -347,7 +348,7 @@ stream_read :: proc(run: ^Run, at: u64) {
 // publish_frame copies the damage of a whole viewer frame into the shared picture, as RGBA, and wakes the window.
 @(private = "file")
 publish_frame :: proc(run: ^Run) {
-	c, s := run.c, &run.session
+	c, s := run.c, &run.protocol_session
 	width := int(s.screen.width)
 	sync.mutex_lock(&c.lock)
 	p := &c.picture
@@ -376,7 +377,7 @@ publish_frame :: proc(run: ^Run) {
 publish_pointer :: proc(run: ^Run) {
 	c := run.c
 	sync.mutex_lock(&c.lock)
-	c.picture.pointer = run.session.pointer
+	c.picture.pointer = run.protocol_session.pointer
 	sync.mutex_unlock(&c.lock)
 	c.on_change(c.on_change_user)
 }
@@ -409,12 +410,12 @@ picture_damage_add :: proc(p: ^Picture, added: session.Rectangle) {
 // end_of says how the connection ended, from the record of QUIC and what the viewer did.
 @(private = "file")
 end_of :: proc(run: ^Run) -> session.End {
-	q := run.quic
+	q := run.quic_connection
 	switch {
 	case run.closed_by_viewer:
 		return {kind = .Closed_By_Viewer}
 	case run.refused:
-		return {kind = .Viewer_Refused_Record, refusal = run.session.refusal, record_problem = run.session.record_problem, screen_piece_problem = run.session.screen_piece_problem}
+		return {kind = .Viewer_Refused_Record, refusal = run.protocol_session.refusal, record_problem = run.protocol_session.record_problem, screen_piece_problem = run.protocol_session.screen_piece_problem}
 	case q.closed_by_handshake_timeout:
 		return {kind = .No_Handshake}
 	case q.closed_by_idle_timeout:
