@@ -5,15 +5,16 @@ form; the arguments of the command line follow `--`.
 
 ## The sources that it takes
 
-- **gui_toolkit, the submodule `ext/gui_toolkit`**, with `inputs.self.submodules = true`: the form of every program of
-  the owner on gui_toolkit (cliche, atelier). The flake then sees the submodule at the commit that the repository pins,
-  so one pin serves the developer, the release workflow and Nix. Nix 2.27 and later take this input; the owner's
-  system has Nix 2.35 (Determinate Nix 3.24).
+- **gui_toolkit, twice at one commit.** The developer and the release workflow build with the submodule
+  `ext/gui_toolkit`; the package builds with the flake input `gui_toolkit` (`flake = false`), which it copies to
+  `ext/gui_toolkit` before the build. `viewertool check` refuses a submodule and an input at two commits
+  (`tools/viewertool/toolkit_pin.odin`). This is socle's form.
 - **modus, the input `modus`** (`github:sachahjkl/modus`, `flake = false`), pinned by `flake.lock`: the source of the
   contract, QUIC and the cryptography (`modus_source.md`).
 
-A second input for gui_toolkit was refused: the submodule would pin one commit and the input another, and the two
-drift.
+The submodule alone, with `inputs.self.submodules = true`, was the first form, as cliche has it. It works for a flake
+fetched by git, and not for `nix run github:sachahjkl/modus-viewer`: a `github:` flake is a tarball, which carries no
+submodule, and the build found no `ext/gui_toolkit`. `self.submodules` stays for a local `nix build .` from a checkout.
 
 ## The package
 

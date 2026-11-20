@@ -8,6 +8,13 @@
       url = "https://flakehub.com/f/cachix/git-hooks.nix/0.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # The toolkit that the viewer is built on: the same commit as the ext/gui_toolkit submodule (`viewertool check` says
+    # so). An input, not the submodule, for the package: a github: flake comes without its submodules
+    # (src/md/infrastructure/flake.md).
+    gui_toolkit = {
+      url = "github:sachahjkl/gui_toolkit/29e3c99f521188599abab7ab16864295dba702aa";
+      flake = false;
+    };
     # The source of the system: the contract of the remote display, QUIC and TLS, the cryptography module. The viewer
     # compiles them from here (src/md/infrastructure/modus_source.md). modus publishes no FlakeHub release, and the
     # viewer needs its source only, not its flake.
@@ -20,6 +27,7 @@
   outputs = {
     nixpkgs,
     git-hooks,
+    gui_toolkit,
     modus,
     ...
   }: let
@@ -93,10 +101,17 @@
       inherit version;
       src = lib.fileset.toSource {
         root = ./.;
-        fileset = lib.fileset.difference ./. (lib.fileset.maybeMissing ./build);
+        # (the toolkit is the input's)
+        fileset = lib.fileset.difference ./. (lib.fileset.unions (map lib.fileset.maybeMissing [./build ./ext/gui_toolkit]));
       };
+      # the toolkit where the build looks for it
+      postUnpack = ''
+        mkdir -p $sourceRoot/ext
+        cp -r ${gui_toolkit} $sourceRoot/ext/gui_toolkit
+        chmod -R u+w $sourceRoot/ext/gui_toolkit
+      '';
       # the crates of the toolkit's native library, vendored: cargo makes no request
-      cargoDeps = pkgs.rustPlatform.importCargoLock {lockFile = ./ext/gui_toolkit/native/gt/Cargo.lock;};
+      cargoDeps = pkgs.rustPlatform.importCargoLock {lockFile = "${gui_toolkit}/native/gt/Cargo.lock";};
 
       nativeBuildInputs = [odin pkgs.cargo pkgs.rustc pkgs.clang pkgs.lld pkgs.autoPatchelfHook pkgs.makeWrapper];
       buildInputs = [pkgs.fontconfig pkgs.freetype pkgs.stdenv.cc.cc.lib];

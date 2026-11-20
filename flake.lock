@@ -36,6 +36,23 @@
         "url": "https://flakehub.com/f/cachix/git-hooks.nix/0.1"
       }
     },
+    "gui_toolkit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1795126145,
+        "narHash": "sha256-ye7gGWOpglmcGM8gMskXkXZps1oNpx0NyPcFyTABVFw=",
+        "owner": "sachahjkl",
+        "repo": "gui_toolkit",
+        "rev": "29e3c99f521188599abab7ab16864295dba702aa",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sachahjkl",
+        "repo": "gui_toolkit",
+        "rev": "29e3c99f521188599abab7ab16864295dba702aa",
+        "type": "github"
+      }
+    },
     "modus": {
       "flake": false,
       "locked": {
@@ -69,6 +86,7 @@
     "root": {
       "inputs": {
         "git-hooks": "git-hooks",
+        "gui_toolkit": "gui_toolkit",
         "modus": "modus",
         "nixpkgs": "nixpkgs"
       }

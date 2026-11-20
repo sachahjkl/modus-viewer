@@ -70,7 +70,8 @@ project :: proc() -> toolbox.Project {
 
 build_options :: proc() -> toolbox.Build_Options {
 	p := project()
-	return {project = p, changelog_command = tk_changelog.command(p), tests = TESTS[:], tool = "tools/viewertool", catalogues = I18N}
+	@(static) checks := [?]toolbox.Build_Check{toolkit_pinned}
+	return {project = p, changelog_command = tk_changelog.command(p), tests = TESTS[:], tool = "tools/viewertool", catalogues = I18N, checks = checks[:]}
 }
 
 main :: proc() {
