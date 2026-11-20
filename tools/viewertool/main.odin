@@ -65,6 +65,7 @@ main :: proc() {
 	b := toolbox.build_commands(build_options())
 	toolbox.tool_main("viewertool", {
 		b[0], b[1], b[2],
+		{name = "machine", usage = "<port> <machine key>: build the viewer, then connect it to a test machine of modus at 127.0.0.1:<port>, with the input on (src/md/features/test_machine.md)", run = run_machine, checked = true, positionals = 2},
 		tk_changelog.command(p),
 	}, toolbox.ROOT_MARK_DEFAULT)
 }

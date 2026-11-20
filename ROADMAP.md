@@ -2,9 +2,9 @@
 
 ## Now
 
-- **A test machine of modus in one command.** `viewertool machine` connects the viewer to a machine that the tool of
-  modus runs on this computer. It needs a relay of the UDP port of the remote display in that tool.
-  [Design](src/md/features/test_machine.md)
+- **A machine of `modustool run` in one command.** `viewertool machine` reaches the machine once the peer of
+  `modustool run` relays a port of the loopback to the UDP port 7101 of `remote_display` and prints that port. The
+  relay is a change of the modus repository. [Design](src/md/features/test_machine.md)
 
 ## Next
 
