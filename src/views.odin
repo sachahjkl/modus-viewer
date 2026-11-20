@@ -123,18 +123,18 @@ title_button :: proc(id, glyph, tip: string, em: f32) -> bool {
 @(private = "file", deferred_none = plate_end)
 plate_begin :: proc(id: string, width_em: f32) -> bool {
 	em := ui.font_size()
-	ui.next({width = ui.fill(), height = ui.fill()})
-	_ = ui.column(.Center)
+	// (boxes pushed by hand: ui.row and ui.column pop at the end of the procedure that calls them, here plate_begin)
+	ui.next({width = ui.fill(), height = ui.fill(), axis = .Y, cross = .Center})
+	ui.push_parent(ui.build_box({}, "###plate_room"))
 	ui.spacer(ui.fill())
 	ui.next({width = ui.px(math.round(em * width_em)), height = ui.children_sum(), axis = .Y, radius = math.round(em * ui.shape_of(.Dialog))})
-	plate := ui.build_box({.Plate}, id)
-	ui.push_parent(plate)
+	ui.push_parent(ui.build_box({.Plate}, id))
 	ui.space(ui.SPACE_4)
-	ui.next({width = ui.fill(), height = ui.children_sum()})
-	_ = ui.row()
+	ui.next({width = ui.fill(), height = ui.children_sum(), axis = .X})
+	ui.push_parent(ui.build_box({}, "###plate_margins"))
 	ui.space(ui.SPACE_4)
 	ui.next({width = ui.fill(), height = ui.children_sum(), axis = .Y})
-	_ = ui.column()
+	ui.push_parent(ui.build_box({}, "###plate_body"))
 	return true
 }
 
