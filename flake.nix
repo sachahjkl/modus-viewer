@@ -74,6 +74,16 @@
     in
       builtins.head (builtins.match ''APP_VERSION :: "([^"]+)".*'' line);
 
+    # The host tests of the protocol client: no window, no socket, no toolkit.
+    session-tests =
+      pkgs.runCommand "modus-viewer-session-tests" {
+        nativeBuildInputs = [odin];
+      } ''
+        export HOME="$TMPDIR"
+        odin test ${./src/session} -collection:modus=${modus}/src/library -vet -out:"$TMPDIR/session_tests"
+        touch $out
+      '';
+
     # The viewer, built from this tree as the release is: viewertool build release.
     modus-viewer = pkgs.stdenv.mkDerivation {
       pname = "modus-viewer";
@@ -148,7 +158,7 @@
     };
     checks.${system} = {
       pre-commit = preCommitCheck;
-      inherit modus-viewer;
+      inherit modus-viewer session-tests;
     };
     formatter.${system} = pkgs.alejandra;
 

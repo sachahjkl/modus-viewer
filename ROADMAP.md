@@ -2,9 +2,6 @@
 
 ## Now
 
-- **The protocol client.** The viewer takes the records of the machine through the border of the contract, rebuilds
-  the screen from its screen pieces and takes each viewer frame, with host tests at the edges of each record.
-  [Design](src/md/features/session.md)
 - **The window.** The viewer shows the screen of the machine at its size, draws the pointer apart, sends the keys and
   the pointer when the user turns the input on, and says why each connection ended.
   [Design](src/md/features/window.md)

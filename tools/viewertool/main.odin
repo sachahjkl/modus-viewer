@@ -31,6 +31,10 @@ COMMANDS_WITHOUT_MODUS := [?]string{"help", "-h", "--help", "changelog"}
 @(rodata)
 LINUX_DEFINES := [?]string{"-define:FONT_BACKEND=native"}
 
+// The packages with host tests. The session needs no window and no socket, so the flake check runs its tests too.
+@(rodata)
+TESTS := [?]toolbox.Test_Package{{path = "src/session"}}
+
 // The collection of the modus source. Project keeps a slice of it for the life of the tool, so it is a package array.
 modus_collection: [1][2]string
 
@@ -47,7 +51,7 @@ project :: proc() -> toolbox.Project {
 
 build_options :: proc() -> toolbox.Build_Options {
 	p := project()
-	return {project = p, changelog_command = tk_changelog.command(p), tool = "tools/viewertool"}
+	return {project = p, changelog_command = tk_changelog.command(p), tests = TESTS[:], tool = "tools/viewertool"}
 }
 
 main :: proc() {
